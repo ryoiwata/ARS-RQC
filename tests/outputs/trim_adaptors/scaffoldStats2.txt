@@ -1,0 +1,6 @@
+#File	/Users/rivers/Documents/RQC/data/reads.fq.gz
+#Total	20000
+#Matched	88	0.44000%
+#Name	Reads	ReadsPct
+Illumina_barcoding_system_Multiplexing_Adapters1_1	87	0.43500%
+v1_5_Small_RNA_3__Adapter	1	0.00500%

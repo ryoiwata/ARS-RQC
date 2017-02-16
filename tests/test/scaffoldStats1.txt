@@ -1,5 +1,0 @@
-#File	../data/reads100.fq.gz
-#Total	200
-#Matched	4	2.00000%
-#Name	Reads	ReadsPct
-gi|9626372|ref|NC_001422.1| Coliphage phiX174, complete genome	4	2.00000%

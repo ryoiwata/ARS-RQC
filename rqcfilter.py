@@ -75,34 +75,36 @@ class Fastq():
                           'stats=' + os.path.join(outdir, 'scaffoldStats1.txt')]
             parameters.extend(bbtoolsdict['filter_contaminants'])
             p1 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
-            return self.metadata['filter_contaminants'] = os.walk(outdir)
+            self.metadata['filter_contaminants'] = os.walk(outdir)
         except RuntimeError:
             print("could not perform contaminant filtering with bbduk")
 
     def trim_adaptors(self, outdir):
         """Calls bbduk to remove contaminant sequences"""
         try:
+            bbtoolsdict = self.parse_params()
             parameters = ['bbduk.sh', 'in=' + self.abspath,
                           'out=' + os.path.join(outdir, 'clean2.fq.gz'),
                           'stats=' + os.path.join(outdir, 'scaffoldStats2.txt')]
             parameters.extend(bbtoolsdict['trim_adaptors'])
             p2 = subprocess.run(parameters)
-            return self.metadata['trim_adaptors'] = os.walk(outdir)
+            self.metadata['trim_adaptors'] = os.walk(outdir)
         except RuntimeError:
             print("could not perform adaptor removal with bbduk")
 
-    def merge_reads(fastq, outdir):
+    def merge_reads(self, outdir):
         """merge reads to generate insert size histogram and \
         optionally save"""
         try:
+            bbtoolsdict = self.parse_params()
             parameters = ['bbmerge.sh', 'in1=' + self.abspath,
-                          'ihist=' os.path.join(outdir, 'merge_histogram.txt'),
+                          'ihist=' + os.path.join(outdir, 'merge_histogram.txt'),
                           'outc=' + os.path.join(outdir, 'cardinality.txt'),
                           'outm=' + os.path.join(outdir, 'merged.fq.gz'),
                           'outu=' + os.path.join(outdir, 'unmerged.fq.gz')]
             parameters.extend(bbtoolsdict['merge_reads'])
             subprocess.run(parameters)
-            return self.metadata['merge_reads'] = os.walk(outdir)
+            self.metadata['merge_reads'] = os.walk(outdir)
         except RuntimeError:
             print("could not perform read merging with bbmerge")
 
@@ -110,15 +112,27 @@ class Fastq():
         """maps reads to repeat-masked human, dog, cat and mouse genomes
         to remove contaminants"""
         try:
+            bbtoolsdict = self.parse_params()
             parameters = ['bbmap.sh',
-                          'in=' self.abspath,
+                          'in=' + self.abspath,
                           'outu=' + os.path.join(outdir, 'novert.fq.gz')]
             parameters.extend(bbtoolsdict['remove_vertebrate_contaminants'])
             suborocess.run(parameters)
-            return self.metadata['remove_vertebrate_contaminants'] = os.walk(outdir)
+            self.metadata['remove_vertebrate_contaminants'] = os.walk(outdir)
         except RuntimeError:
             print("Could not perform vertebrate conaminant removal with bbmap")
 
+    def sortbyname(self):
+        """Sorts a fastq file by read names"""
+        try:
+            temp_ordered_dir = tempfile.TemporaryDirectory()
+            tfile = os.path.join(temp_ordered_dir.name, 'sorted.fq.gz')
+            subprocess.run(['sortbyname.sh',
+                            "in=" + self.abspath,
+                            "out=" + tfile])
+            shutil.move(tfile, self.abspath)
+        except RuntimeError:
+            print("could not reorder fastq file by name")
 
 def main():
     parser = argparse.ArgumentParser(description='rqcfilter.py - \
@@ -195,7 +209,7 @@ def main():
     tmp_cf = mk_temp_dir(rqctempdir, 'contaminant_filtering')  # make temp dir
     logging.info('Starting contaminant removal')
     data1 = Fastq(path=abs_fastq)
-    deconfiles = data1.contaminant_filtering(tmp_cf)
+    deconfiles = data1.filter_contaminants(tmp_cf)
 
     # Trim adaptors
     tmp_ta = mk_temp_dir(rqctempdir, 'trim_adaptors')  # make temp. dir.
@@ -210,10 +224,10 @@ def main():
         data3 = Fastq(os.path.join(tmp_rv, 'clean2.fq.gz'))
         if not os.path.isdir(data/dogcatmousehuman/ref):
             pass  # pass until this is on the server with the references
-            build_vertebrate_db(cat=,
-                                dog=,
-                                human=,
-                                mouse=,
+            build_vertebrate_db(cat=data/cat.fa.gz,
+                                dog=data/dog.fa.gz,
+                                human=data/hg19.fa.gz,
+                                mouse=data/mouse.fa.gz,
                                 datadir=data/dogcatmousehuman)
 
         trimfiles = data.remove_vertebrate_contaminants(path=tmp_rv)

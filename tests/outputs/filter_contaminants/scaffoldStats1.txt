@@ -1,0 +1,10 @@
+#File	/Users/rivers/Documents/RQC/data/reads.fq.gz
+#Total	20000
+#Matched	289	1.44500%
+#Name	Reads	ReadsPct
+gi|9626372|ref|NC_001422.1| Coliphage phiX174, complete genome	248	1.24000%
+Reverse_adapter	23	0.11500%
+TruSeq_Universal_Adapter	8	0.04000%
+pcr_dimer	8	0.04000%
+cre_lox_pcr_primer_1	1	0.00500%
+nextera_R2_right_side_adapter	1	0.00500%
