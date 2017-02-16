@@ -1,6 +1,6 @@
 {
   "rqcfilter":{
-    "trim_adaptors":{
+    "filter_contaminants":{
       "maq":[
         "5",
         "0"
@@ -20,8 +20,6 @@
       "barcodefilter":"crash",
       "ow":"true",
       "rqc":"hashmap",
-      "outduk":"kmerStats1.txt",
-      "stats":"scaffoldStats1.txt",
       "loglog":"true",
       "ref":[
         "data/Illumina.artifacts.2013.12.no_DNA_RNA_spikeins.fa",
@@ -32,7 +30,7 @@
       ]
     }
   },
-  "contaminant_filtering":{
+  "trim_adaptors":{
     "overwrite":"true",
     "k":"20",
     "hdist":"1",
@@ -44,7 +42,7 @@
     "loglog":"true",
     "ref":"short.fa"
   },
-  "mergereads":{
+  "merge_reads":{
     "minoverlap":"8",
     "minoverlap0":"9",
     "qualiters":"4",
@@ -71,8 +69,9 @@
     "k":"14",
     "usemodulo":"true"
   },
-  "vertebrate_contaminant_removal":{
+  "remove_vertebrate_contaminants":{
     "usemodulo":"true",
+    "build":"1",
     "k":"14",
     "maxindel":"3",
     "bwr":"0.16",
