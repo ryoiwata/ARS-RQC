@@ -123,16 +123,23 @@ class Fastq():
             print("Could not perform vertebrate conaminant removal with bbmap")
 
     def sortbyname(self):
-        """Sorts a fastq file by read names"""
+        """Sorts a fastq file by read names, outputs uncompressed fastq"""
         try:
-            temp_ordered_dir = tempfile.TemporaryDirectory()
-            tfile = os.path.join(temp_ordered_dir.name, 'sorted.fq.gz')
+            temp_ordered_dir = tempfile.mkdtemp()
+            root, base = os.path.split(self.abspath)
+            if base.endswith(".gz"):
+                uc = base.rsplit(".", 1)[0]
+            else:
+                uc = base
+            tfile = os.path.join(temp_ordered_dir, 'sorted.fq')
             subprocess.run(['sortbyname.sh',
                             "in=" + self.abspath,
                             "out=" + tfile])
-            shutil.move(tfile, self.abspath)
+            shutil.move(tfile, os.path.join(root, uc))
         except RuntimeError:
             print("could not reorder fastq file by name")
+        finally:
+            shutil.rmtree(temp_ordered_dir)
 
 def main():
     parser = argparse.ArgumentParser(description='rqcfilter.py - \
