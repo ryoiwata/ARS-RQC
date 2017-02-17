@@ -75,7 +75,8 @@ class Fastq():
                           'stats=' + os.path.join(outdir, 'scaffoldStats1.txt')]
             parameters.extend(bbtoolsdict['filter_contaminants'])
             p1 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
-            self.metadata['filter_contaminants'] = os.walk(outdir)
+            self.metadata['filter_contaminants'] = list(os.walk(outdir))
+            return p1.stderr.decode('utf-8')
         except RuntimeError:
             print("could not perform contaminant filtering with bbduk")
 
@@ -87,8 +88,9 @@ class Fastq():
                           'out=' + os.path.join(outdir, 'clean2.fq.gz'),
                           'stats=' + os.path.join(outdir, 'scaffoldStats2.txt')]
             parameters.extend(bbtoolsdict['trim_adaptors'])
-            p2 = subprocess.run(parameters)
-            self.metadata['trim_adaptors'] = os.walk(outdir)
+            p2 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            self.metadata['trim_adaptors'] = list(os.walk(outdir))
+            return p2.stderr.decode('utf-8')
         except RuntimeError:
             print("could not perform adaptor removal with bbduk")
 
@@ -103,8 +105,9 @@ class Fastq():
                           'outm=' + os.path.join(outdir, 'merged.fq.gz'),
                           'outu=' + os.path.join(outdir, 'unmerged.fq.gz')]
             parameters.extend(bbtoolsdict['merge_reads'])
-            subprocess.run(parameters)
-            self.metadata['merge_reads'] = os.walk(outdir)
+            p3 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            self.metadata['merge_reads'] = list(os.walk(outdir))
+            return p3.stderr.decode('utf-8')
         except RuntimeError:
             print("could not perform read merging with bbmerge")
 
@@ -117,8 +120,9 @@ class Fastq():
                           'in=' + self.abspath,
                           'outu=' + os.path.join(outdir, 'novert.fq.gz')]
             parameters.extend(bbtoolsdict['remove_vertebrate_contaminants'])
-            suborocess.run(parameters)
-            self.metadata['remove_vertebrate_contaminants'] = os.walk(outdir)
+            p4 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            self.metadata['remove_vertebrate_contaminants'] = list(os.walk(outdir))
+            return p4.stderr.decode('utf-8')
         except RuntimeError:
             print("Could not perform vertebrate conaminant removal with bbmap")
 
@@ -141,7 +145,8 @@ class Fastq():
         finally:
             shutil.rmtree(temp_ordered_dir)
 
-def main():
+
+def myparser():
     parser = argparse.ArgumentParser(description='rqcfilter.py - \
                                      A sequence quality control and metadata \
                                      collection workflow.')
@@ -161,19 +166,26 @@ def main():
                         help='the output directory')
 
     parser.add_argument('--removevertebrates', '-r', action='store_true',
+                        default=False,
                         help='A flag to specify if the reads should be mapped  \
                         against human, cat, dog and mouse genomes to find \
                         contaminants. Default = True.')
 
-    parser.add_argument('--paired', '-p', action='store_true',
+    parser.add_argument('--paired', '-p', action='store_true', default=False,
                         help='A flag to specify if the fastq file is \
                         paired and interleaved. Default = True.')
 
     parser.add_argument('--keepmerged', '-km', action='store_true',
+                        default=False,
                         help='Keep fastq files with merged and unmerged reads. \
                         Defualt = True. and unmerged reads will be output')
 
     args = parser.parse_args()
+    return args
+
+def main():
+
+    args = myparser()
 
     # Utility functions
     def mk_temp_dir(tempdir, suffix):
@@ -198,63 +210,58 @@ def main():
                         format='%(asctime)s %(message)s')
     logging.info('Starting quality control workflow.')
 
-    # Validate options
-    if args.fastqpair and args.fastq is not None:
-        raise Exception("Please pass only a paired or unpaired fastq or \
-                        fastq.gz file, not both.")
-        logging.error('Please pass only a paired or unpaired fastq or fastq.gz \
-                      file, not both.')
-
     # Assign globals
     abs_fastq = os.path.abspath(args.fastq)
-    abs_datadir = os.path.abspath('data')
 
     # Create temporary directory
-    rqctempdir = tempfile.TemporaryDirectory()
+    rqctempdir = tempfile.mkdtemp()
 
     # Remove contaminants
-    tmp_cf = mk_temp_dir(rqctempdir, 'contaminant_filtering')  # make temp dir
+    tmp_fc = mk_temp_dir(rqctempdir, 'filter_contaminants')  # make temp dir
     logging.info('Starting contaminant removal')
     data1 = Fastq(path=abs_fastq)
-    deconfiles = data1.filter_contaminants(tmp_cf)
-
+    deconfiles = data1.filter_contaminants(outdir=tmp_fc)
+    logging.info(deconfiles)
     # Trim adaptors
     tmp_ta = mk_temp_dir(rqctempdir, 'trim_adaptors')  # make temp. dir.
     logging.info('Starting adaptor trimming')
-    data2 = Fastq(os.path.join(tmp_cf, 'clean1.fq.gz'))
-    trimfiles = data.trim_adaptors(path=tmp_ta)
-
+    data2 = Fastq(os.path.join(tmp_fc, 'clean1.fq.gz'))
+    trimfiles = data2.trim_adaptors(outdir=tmp_ta)
+    logging.info(trimfiles)
     if args.removevertebrates:
-        tmp_rv = mk_temp_dir(rqctempdir, 'vertebrate_contaminant_removal')
+        tmp_rvc = mk_temp_dir(rqctempdir, 'remove_vertebrate_contaminants')
         logging.info('Removing dog, cat, mouse and humanreads')
         # Create new Fastq object
-        data3 = Fastq(os.path.join(tmp_rv, 'clean2.fq.gz'))
+        data3 = Fastq(os.path.join(tmp_ta, 'clean2.fq.gz'))
         if not os.path.isdir(data/dogcatmousehuman/ref):
             pass  # pass until this is on the server with the references
-            build_vertebrate_db(cat=data/cat.fa.gz,
-                                dog=data/dog.fa.gz,
-                                human=data/hg19.fa.gz,
-                                mouse=data/mouse.fa.gz,
-                                datadir=data/dogcatmousehuman)
-
-        trimfiles = data.remove_vertebrate_contaminants(path=tmp_rv)
+            # build_vertebrate_db(cat=data/cat.fa.gz,
+            #                     dog=data/dog.fa.gz,
+            #                     human=data/hg19.fa.gz,
+            #                     mouse=data/mouse.fa.gz,
+            #                     datadir=data/dogcatmousehuman
+        rvcfiles = data.remove_vertebrate_contaminants(outdir=tmp_rvc)
+        logginf.info(rvcfiles)
 
     if args.paired:
         # merge files
         tmp_mr = mk_temp_dir(rqctempdir, 'merge_reads')  # make temp. dir.
-        logging.info('Merging reads pairs')
+        logging.info('Merging read pairs')
 
         # Create new Fastq object
         if args.removevertebrates:
-            infile = 'novert.fq.gz'
+            infile = os.path.join(tmp_vcr, 'novert.fq.gz')
         else:
-            infile = 'clean2.fq.gz'
+            infile = os.path.join(tmp_ta,'clean2.fq.gz')
         data4 = Fastq(os.path.join(tmp_mr, infile))
-        mergefiles = data.merge_reads(path=infile)
+        mergefiles = data4.merge_reads(outdir=tmp_mr)
+        logging.info(mergefiles)
 
     # For now copy all files from the tempdir to the output dir
-    shutil.copytree(rqctmpdir, args.output)
-
+    logging.info("copying files from temporary directory to ouput directory")
+    shutil.copytree(rqctempdir, os.path.join(args.output,"output"))
+    shutil.rmtree(rqctempdir)
+    logging.info("Completed RQC run")
 
 if __name__ == '__main__':
     main()
