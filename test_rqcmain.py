@@ -1,3 +1,7 @@
+#!/usr/env/python3
+# test_rqcmain.py - a testing module for rqcmain.py
+# Adam Rivers 02/2017 USDA-ARS-GBRU
+
 import unittest
 import os
 import tempfile
@@ -16,7 +20,7 @@ class TestfastqMethods(unittest.TestCase):
             fq1 = os.path.join(testdir, 'clean1.fq.gz')  # test output datadir
             fqo1 = rqcmain.Fastq(fq1)  # create fastq object from output fastq
             fqo1.sortbyname()  # sort by read name (read order from bbduk varies)
-            fq2 = 'tests/outputs/filter_contaminants/clean1.fq'  # valid. data
+            fq2 = 'tests/outputs/filter_contaminants/clean1.fq'
             fqo2 = rqcmain.Fastq(fq2)  # create object with validation data
             fqo2.sortbyname()  # sort validation data by name
             #shutil.copytree(testdir, 'fc_dir')

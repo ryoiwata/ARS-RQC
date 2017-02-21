@@ -15,6 +15,7 @@
       "hdist":"1",
       "pigz":"true",
       "unpigz":"true",
+      "statscolumns":"5",
       "zl":"6",
       "cf":"true",
       "barcodefilter":"crash",

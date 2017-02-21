@@ -1,5 +1,5 @@
 #!/usr/env/python3
-# rqcfilter.py - A sequence quality control and metadata collection workflow
+# rqcmain.py - The core module for ARS-RQC qulaity control workflow
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 import argparse
 import os
@@ -10,21 +10,20 @@ import json
 import shutil
 
 
-def build_vertebrate_db(cat, dog, human, mouse, datadir):
-    """Builds a bbmap.sh database for mapping reads to masked versions of
+def build_vertebrate_db(cat, dog, mouse, human, datadir):
+    """Builds a bbsplit.sh database for mapping reads to masked versions of
     the cat, dog, human and mouse genome. Returns the path of the database"""
     try:
-        parameters = ['bbmap.sh', 'build=1', 'k=14', 'usemodulo',
-                      'ref=' +
-                      os.path.abspath(cat) + ',' +
-                      os.path.abspath(dog) + ',' +
-                      os.path.abspath(human) + ',' +
-                      os.path.abspath(mouse),
-                      'path=' + os.path.join(datadir, 'dogcatmousehuman')]
-        subprocess.run(parameters)
-        return os.path.join(datadir, 'dogcatmousehuman')
+        parameters = ['bbsplit.sh', 'build=1', 'k=14', 'usemodulo',
+                      'ref_cat=' + os.path.abspath(cat),
+                      'ref_dog=' + os.path.abspath(dog),
+                      'ref_mouse=' + os.path.abspath(mouse),
+                      'ref_mouse=' + os.path.abspath(human),
+                      'path=' + os.path.join(datadir)]
+        p0 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+        return p0.stderr.decode('utf-8')
     except RuntimeError:
-        print("Couldn't build database of vertebrate contaminants using bbmap")
+        print("Couldn't build database of vertebrate contaminants using bbsplit")
 
 
 class Fastq():
@@ -65,20 +64,34 @@ class Fastq():
         return 'Fastq Class object :' + self.filename
 
     def filter_contaminants(self, outdir):
-        """Calls bbduk to perform adapter removal"""
+        """Calls bbduk to perform adapter removal and create quality data"""
         try:
             bbtoolsdict = self.parse_params()
             parameters = ['bbduk.sh',
                           'in=' + self.abspath,
                           'out=' + os.path.join(outdir, 'clean1.fq.gz'),
-                          'outduk=' + os.path.join(outdir, 'kmerStats1.txt'),
-                          'stats=' + os.path.join(outdir, 'scaffoldStats1.txt')]
+                          # Write statistics about  contamininants detected.
+                          'stats=' + os.path.join(outdir, 'scaffoldStats1.txt'),
+                          # Base composition histogram by position
+                          'bhist=' + os.path.join(outdir, 'bhist.txt'),
+                          #  Quality histogram by position.
+                          'qhist=' + os.path.join(outdir, 'qhist.txt'),
+                          # Count of bases with each quality value.
+                          'qchist=' + os.path.join(outdir, 'qchist.txt'),
+                          # Histogram of average read quality.
+                          'aqhist=' + os.path.join(outdir, 'aqhist.txt'),
+                          # Quality histogram designed for box plots.
+                          'bqhist=' + os.path.join(outdir, 'bqhist.txt'),
+                          # Read GC content histogram.
+                          'gchist=' + os.path.join(outdir, 'gchist.txt')
+                          ]
             parameters.extend(bbtoolsdict['filter_contaminants'])
             p1 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
             self.metadata['filter_contaminants'] = list(os.walk(outdir))
             return p1.stderr.decode('utf-8')
         except RuntimeError:
             print("could not perform contaminant filtering with bbduk")
+            print(p1.stderr.decode('utf-8'))
 
     def trim_adaptors(self, outdir):
         """Calls bbduk to remove contaminant sequences"""
@@ -116,7 +129,7 @@ class Fastq():
         to remove contaminants"""
         try:
             bbtoolsdict = self.parse_params()
-            parameters = ['bbmap.sh',
+            parameters = ['bbsplit.sh',
                           'in=' + self.abspath,
                           'outu=' + os.path.join(outdir, 'novert.fq.gz')]
             parameters.extend(bbtoolsdict['remove_vertebrate_contaminants'])
@@ -143,5 +156,6 @@ class Fastq():
             return p5.stderr.decode('utf-8')
         except RuntimeError:
             print("could not reorder fastq file by name")
+            print(p5.stderr.decode('utf-8'))
         finally:
             shutil.rmtree(temp_ordered_dir)
