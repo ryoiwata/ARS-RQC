@@ -25,6 +25,19 @@ def build_vertebrate_db(cat, dog, mouse, human, datadir):
     except RuntimeError:
         print("Couldn't build database of vertebrate contaminants using bbsplit")
 
+def estimate_kmer_coverage(histogram, outdir):
+    """estimates the proportion of the kmers at a depth of 3x, 5x and 10x \
+    and extrapolates the coverage out beyond the current coverage using a \
+    rational function approximation method in PreSeqR. Returns json object."""
+    try:
+        parameters = ['coverage_est.R',
+                      '--plot', 'FALSE',
+                      '--input', os.path.abspath(histogram),
+                      '--coverage', 'c(3, 5, 10)']
+        p6 = subprocess.run(parameters, check=True, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+        return p6.stdout.decode('utf-8')
+
 
 class Fastq():
 
@@ -149,8 +162,8 @@ class Fastq():
             else:
                 uc = base
             tfile = os.path.join(temp_ordered_dir, 'sorted.fq')
-            parameters = ['sortbyname.sh', "in=" + self.abspath,
-                          "out=" + tfile]
+            parameters = ['sortbyname.sh', 'in=' + self.abspath,
+                          'out=' + tfile]
             p5 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
             shutil.move(tfile, os.path.join(root, uc))
             return p5.stderr.decode('utf-8')
@@ -159,3 +172,34 @@ class Fastq():
             print(p5.stderr.decode('utf-8'))
         finally:
             shutil.rmtree(temp_ordered_dir)
+
+    def calculate_kmer_histogram(self, outdir, k):
+        """calcualtes kmer histogram from a fastq file using BBtools \
+        kmercountexact.sh and if that fails, approximates it with khist.sh"""
+        try:
+            bbtoolsdict = self.parse_params()
+            parameters = ['kmercountexact.sh',
+                          'in=' + self.abspath,
+                          'k=' + str(k),
+                          'hist=' + 'k' + str(k) + 'hist.txt']
+            parameters.extend(bbtoolsdict['calculate_kmer_histogram']
+                              ['kmercountexact.sh'])
+            p5a = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
+            return p5a.stderr.decode('utf-8')
+        except RuntimeError:
+            print("Could not calculate the kmer histogram with \
+                  kmerexactcount.sh. Attempting to estimate it with khist.sh")
+            try:
+                bbtoolsdict = self.parse_params()
+                parameters = ['khist.sh',
+                              'in=' + self.abspath,
+                              'k=' + str(k),
+                              'hist=' + 'k' + str(k) + 'hist.txt']
+                parameters.extend(bbtoolsdict['calculate_kmer_histogram']
+                                  ['khist.sh'])
+                p5b = suborocess.run(parameters, check=True,
+                                     stderr=subprocess.PIPE)
+                self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
+            except RuntimeError:
+                return p5b.stderr.decode('utf-8')

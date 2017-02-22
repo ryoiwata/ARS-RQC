@@ -83,6 +83,17 @@
       "printunmappedcount":"true",
       "maxsites":"1",
       "machineout":"true"
+    },
+    "calculate_kmer_histogram":{
+      "khist.sh":{
+        "histcol":"2",
+        "k":"31"},
+      "kmercountexact.sh":{
+        "k":"31"}
+      },
+    "estimate_kmer_coverage":{
+      
+    }
     }
   }
 }
