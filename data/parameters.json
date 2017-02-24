@@ -36,7 +36,7 @@
       "hdist":"1",
       "pigz":"true",
       "unpigz":"true",
-      "zl":"8",
+      "zl":"6",
       "ow":"true",
       "loglog":"true",
       "ref":"data/short.fa"
@@ -60,7 +60,9 @@
       "pigz":"true",
       "unpigz":"true",
       "usejni":"true",
-      "zl":"8",
+      "zl":"6",
+      "eeco":"t",
+      "mix":"t",
       "adapters":"data/adapters2.fa"
     },
     "build_vertebrate_db":{
@@ -87,13 +89,20 @@
     "calculate_kmer_histogram":{
       "khist.sh":{
         "histcol":"2",
-        "k":"31"},
-      "kmercountexact.sh":{
-        "k":"31"}
+        "k":"31"
       },
-    "estimate_kmer_coverage":{
-      
+      "kmercountexact.sh":{
+        "k":"31"
+      }
+    },
+    "clumpify":{
+      "ecc":"t",
+      "passes":"6",
+      "zl":"8"
     }
-    }
+  },
+  "parser":{
+    "filename":"function",
+
   }
 }

@@ -25,6 +25,7 @@ def build_vertebrate_db(cat, dog, mouse, human, datadir):
     except RuntimeError:
         print("Couldn't build database of vertebrate contaminants using bbsplit")
 
+
 def estimate_kmer_coverage(histogram, outdir):
     """estimates the proportion of the kmers at a depth of 3x, 5x and 10x \
     and extrapolates the coverage out beyond the current coverage using a \
@@ -122,7 +123,7 @@ class Fastq():
 
     def merge_reads(self, outdir):
         """merge reads to generate insert size histogram and \
-        optionally save"""
+        error correct, retuns unmerged reads"""
         try:
             bbtoolsdict = self.parse_params()
             parameters = ['bbmerge.sh', 'in1=' + self.abspath,
@@ -203,3 +204,22 @@ class Fastq():
                 self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
             except RuntimeError:
                 return p5b.stderr.decode('utf-8')
+
+        def clumpify(self, outdir):
+            """Reorders reads or read pairs in a fastq file by shared kmers. \
+            This reduces the size of compressed files by about 30% \
+            and speeds up kmer-based analyses like de Bruijn assembly by \
+            increasing the use of CPU cashe"""
+            try:
+                btoolsdict = self.parse_params()
+                parameters = ['clumpify.sh',
+                              'in=' + self.abspath
+                              'out=' + os.path.join(outdir, 'clumped.fq.gz')]
+                parameters.extend(bbtoolsdict['clumpify'])
+                p6 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
+                self.metadata['clumpify'] = list(os.walk(outdir))
+                return p6.stderr.decode('utf-8')
+            except RuntimeError:
+                print("Could not reorder and error correct the data with \
+                      clumpify.sh"
+                return p6.stderr.decode('utf-8')
