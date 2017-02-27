@@ -5,7 +5,9 @@
 import json
 import pandas as pd
 import numpy as np
-import rqcmain
+# import rqcmain
+import tempfile
+import os
 
 
 def _header_lines(file, symbol='#'):
@@ -18,32 +20,106 @@ def _header_lines(file, symbol='#'):
             else:
                 return lc
 
-def txt_to_df_simpleheader(file):
-    """Converts tabular files with one header line preceded by a # to a \
+
+def parser_1(file):
+    """Converts tabular files with one header line preceded by a # to a
     pandas dataframe then returns a dictionary of that dataframe"""
     try:
         f = os.path.abspath(file)
         dta = pd.read_csv(f, sep="\t")
         # Trim off leading #, if present
         if dta.columns[0].startswith('#'):
-            dta.rename(columns={dta.columns[0]: dta.columns[0][1:]}, inplace=True)
+            dta.rename(columns={dta.columns[0]: dta.columns[0][1:]},
+                       inplace=True)
         return dta.to_dict()
     except RuntimeError:
         print("could not parse the file {}".format(file))
+
+
+def parser_2(file):
+    """Converts files with preliminary lines of key-value data
+    prefixed by a # followed by one header line preceded by a #, followed by
+    tabular data. converts tabular data to pandas dataframe then returns a
+    a dictionary of the key value data and the dataframe"""
+    try:
+        f = os.path.abspath(file)
+        hlines = _header_lines(f)  # Count number of header lines
+        ddict = {}  # Create temporary dictionary
+        tf = tempfile.NamedTemporaryFile(delete=False, mode='w')
+        with open(f, 'r') as d1:  # Open the data file
+            for n, line in enumerate(d1):  # Read and count lines
+                if n < (hlines - 1):
+                    ll = line.strip().split('\t')
+                    try:
+                        if len(ll) == 2:
+                                cleankey = ll[0][1:]
+                                ddict[cleankey] = ll[1]
+                    except RuntimeError:
+                        print("parser 2 failed: There were not two columns in \
+                              line {}".format(str(n+1)))
+                else:
+                    tf.write(line)
+        fname = tf.name
+        tf.close()
+        ddict['dataframe'] = parser_1(fname)
+        return ddict
+    except RuntimeError:
+        print("Could not parse file {}".format(file))
+    finally:
+        os.remove(fname)
+
+
+def parser_3(file):
+    """Converts bbduk scaffold report files ot dictionaries"""
+    try:
+        f = os.path.abspath(file)
+        hlines = _header_lines(f)  # Count number of header lines
+        ddict = {}  # Create temporary dictionary
+        tf = tempfile.NamedTemporaryFile(delete=False, mode='w')
+        with open(f, 'r') as d1:  # Open the data file
+            for n, line in enumerate(d1):  # Read and count lines
+                ll = line.strip().split('\t')
+                if n == 0:
+                    next
+                if n == 1:
+                    ddict["TotalReads"] = ll[1]
+                    ddict["TotalBases"] = ll[2]
+                elif n == 2:
+                    ddict["ReadsMatched"] = ll[1]
+                    ddict["PctReadsMatched"] = ll[2]
+                elif n >= 3:
+                    tf.write(line)
+        fname = tf.name
+        tf.close()
+        ddict['dataframe'] = parser_1(fname)
+        return ddict
+    except RuntimeError:
+        print("Could not parse file {}".format(file))
+    finally:
+        os.remove(fname)
+
+
+def parser_4(file):
+    with open(os.path.abspath(file), 'r') as f:
+        value = f.readline().strip()
+        pname = os.path.basename(file).split(".")[0]
+        return {pname: value}
+
 
 def select_pfunc(file):
     try:
         fbase = os.path.basename(file)
         with open("data/parameters.json", 'r') as p:
-        fastq_parameters = json.load(p)
-        pfunc = fastq_parameters["parser"]["fbase"]
-        return pfunc
+            fastq_parameters = json.load(p)
+            pfunc = fastq_parameters["parser"][fbase]
+            print(pfunc)
+            return pfunc
     except IOError:
         print("Could not determine the correct parsing function to use for the \
               file {}. Check the paramaters.json file".format(file))
 
-def parse_dir(dir)):
 
+def parse_dir(dir):
     """ takes a file path looks the file name up in the parameters file and \
     returns a dataframe"""
     bname = os.path.basename(dir)
@@ -51,8 +127,11 @@ def parse_dir(dir)):
     for file in os.listdir(dir):
         try:
             pfunc = select_pfunc(file)
-            result = eval(pfunc + '(' + file + ')')
-            ddict[bname][os.path.basename(file)]=result
+            print(pfunc)
+            print(type(pfunc))
+            print(file)
+            result = eval(rqcparser + '.' + pfunc + '(' + file + ')')  # This is not working
+            ddict[bname][os.path.basename(file)] = result
         except IOError:
             print("could not parse file {}".format(file))
             pass

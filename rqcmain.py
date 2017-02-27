@@ -41,7 +41,6 @@ def estimate_kmer_coverage(histogram, outdir):
 
 
 class Fastq():
-
     @classmethod
     def parse_params(self):
         """converts parameters from a json file into a dictionary formatted

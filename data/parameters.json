@@ -102,7 +102,15 @@
     }
   },
   "parser":{
-    "filename":"function",
-
+    "aqhist.txt":"parser_1",
+    "bhist.txt":"parser_1",
+    "bqhist.txt":"parser_1",
+    "gchist.txt":"parser_2",
+    "qchist.txt":"parser_1",
+    "qhist.tct":"parser_1",
+    "scaffoldStats1.txt":"parser_3",
+    "cardnality.txt":"parser_4",
+    "merge_histogram.txt":"parser_2",
+    "scaffoldStats2.txt":"parser_3"
   }
 }
