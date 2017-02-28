@@ -23,7 +23,7 @@ def build_vertebrate_db(cat, dog, mouse, human, datadir):
         p0 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
         return p0.stderr.decode('utf-8')
     except RuntimeError:
-        print("Couldn't build database of vertebrate contaminants using bbsplit")
+        print("Couldn't build DB of vertebrate contaminants using bbsplit")
 
 
 def estimate_kmer_coverage(histogram, outdir):
@@ -38,9 +38,12 @@ def estimate_kmer_coverage(histogram, outdir):
         p6 = subprocess.run(parameters, check=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
         return p6.stdout.decode('utf-8')
-
+    except RuntimeError:
+        print("Could not estimate kmer coverage beyond current depth \
+              using PreseqR")
 
 class Fastq():
+
     @classmethod
     def parse_params(self):
         """converts parameters from a json file into a dictionary formatted
@@ -212,7 +215,7 @@ class Fastq():
             try:
                 btoolsdict = self.parse_params()
                 parameters = ['clumpify.sh',
-                              'in=' + self.abspath
+                              'in=' + self.abspath,
                               'out=' + os.path.join(outdir, 'clumped.fq.gz')]
                 parameters.extend(bbtoolsdict['clumpify'])
                 p6 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
@@ -220,5 +223,5 @@ class Fastq():
                 return p6.stderr.decode('utf-8')
             except RuntimeError:
                 print("Could not reorder and error correct the data with \
-                      clumpify.sh"
+                      clumpify.sh")
                 return p6.stderr.decode('utf-8')

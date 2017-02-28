@@ -12,14 +12,16 @@ import os
 
 def _header_lines(file, symbol='#'):
     """returns number of header lines at the beginning of a file"""
-    with open(file, 'r') as f:
-        lc = 0
-        for line in f:
-            if line.startswith(symbol):
-                lc += 1
-            else:
-                return lc
-
+    try:
+        with open(file, 'r') as f:
+            lc = 0
+            for line in f:
+                if line.startswith(symbol):
+                    lc += 1
+                else:
+                    return lc
+    except IOError:
+        print("could not open file {}".format(file))
 
 def parser_1(file):
     """Converts tabular files with one header line preceded by a # to a
@@ -106,14 +108,16 @@ def parser_4(file):
         return {pname: value}
 
 
-def select_pfunc(file):
+def _select_pfunc(file):
     try:
         fbase = os.path.basename(file)
         with open("data/parameters.json", 'r') as p:
             fastq_parameters = json.load(p)
-            pfunc = fastq_parameters["parser"][fbase]
-            print(pfunc)
-            return pfunc
+            if fbase in fastq_parameters["parser"]:
+                pfunc = fastq_parameters["parser"][fbase]
+                return pfunc
+            else:
+                return None
     except IOError:
         print("Could not determine the correct parsing function to use for the \
               file {}. Check the paramaters.json file".format(file))
@@ -123,16 +127,21 @@ def parse_dir(dir):
     """ takes a file path looks the file name up in the parameters file and \
     returns a dataframe"""
     bname = os.path.basename(dir)
+    print(bname)
     ddict = {}
+    ddict[bname] = {}
     for file in os.listdir(dir):
+        ffile = os.path.join(dir,file)
         try:
-            pfunc = select_pfunc(file)
-            print(pfunc)
-            print(type(pfunc))
-            print(file)
-            result = eval(rqcparser + '.' + pfunc + '(' + file + ')')  # This is not working
-            ddict[bname][os.path.basename(file)] = result
+            pfunc = _select_pfunc(ffile)
+            if pfunc:
+                command = str(pfunc) + '("' + str(ffile) + '")'
+                result = eval(command)
+                ddict[bname][file] = result
+            else:
+                print ("skipping file {}".format(ffile))
+                continue
         except IOError:
-            print("could not parse file {}".format(file))
-            pass
+            print("could not parse file {}".format(ffile))
+            continue
     return ddict
