@@ -12,6 +12,56 @@ import rqcmain
 import rqcparser
 
 
+# Utility functions
+def convert_keys_to_string(dictionary):
+    """Recursively converts dictionary keys to strings."""
+    if not isinstance(dictionary, dict):
+        return dictionary
+    return dict((str(k), convert_keys_to_string(v))
+                for k, v in dictionary.items())
+
+
+def write_metadata(datadict, file):
+    """Writes dictionary to json file"""
+    ddc = convert_keys_to_string(datadict)
+    print(json.dumps(ddc, default=str))
+    try:
+        with open(file, 'w') as f:
+            json.dump(obj=ddc, fp=f, default=str)
+    except IOError:
+        print("Could not write json metadata file")
+
+
+def create_clean_name(fastq):
+    """Parses the fastq input name, inserting 'arsrqc' into the name"""
+    try:
+        fastqnamelist = os.path.basename(fastq).split(".")
+        if fastqnamelist[-1] is 'gz' and fastqnamelist[-2] in ('fastq', 'fq'):
+            rqcnamelist = fastqnamelist.insert(-2, 'arsrqc')
+            rqcname = '.'.join(rqcnamelist)
+        elif fastqnamelist[-1] in ('fastq', 'fq'):
+            rqcnamelist = fastqnamelist.insert(-1, 'arsrqc')
+            rqcnamelist.append('gz')
+            rqcname = '.'.join(rqcnamelist)
+            return rqcname
+    except RuntimeError:
+        print("Could not parse the name of the input fastq file. Please \
+        make sure it ends in .fq, .fastq, .fq.gz or .fastq.gz ")
+
+
+def mk_temp_dir(tempdir, suffix):
+    """takes a root directory and a suffix and creates that \
+    directory, logging progress and returning the path"""
+    fulltemp = os.path.join(tempdir, suffix)
+    logging.info('Creating temporary directory: {}'.format(fulltemp))
+    try:
+        os.mkdir(fulltemp)
+    except IOError:
+        logging.error('could not create temporary \
+                      directory: {}'.format(fulltemp))
+    return fulltemp
+
+
 def myparser():
     parser = argparse.ArgumentParser(description='rqcfilter.py - \
                                      A sequence quality control and metadata \
@@ -45,47 +95,11 @@ def myparser():
     return args
 
 
-def write_metadata(datadict, file):
-    try:
-        with open(file, 'w') as f:
-            json.dump(datadict, f)
-    except IOError:
-        print("Could not write json metadata file")
-
-
-def create_clean_name(fastq):
-    try:
-        fastqnamelist = os.path.basename(fastq).split(".")
-        if fastqnamelist[-1] is 'gz' and fastqnamelist[-2] in ('fastq', 'fq'):
-            rqcnamelist = fastqnamelist.insert(-2, 'arsrqc')
-            rqcname = '.'.join(rqcnamelist)
-        elif fastqnamelist[-1] in ('fastq', 'fq'):
-            rqcnamelist = fastqnamelist.insert(-1, 'arsrqc')
-            rqcnamelist.append('gz')
-            rqcname = '.'.join(rqcnamelist)
-            return rqcname
-    except RuntimeError:
-        print("Could not parse the name of the input fastq file. Please \
-        make sure it ends in .fq, .fastq, .fq.gz or .fastq.gz ")
-
-
+# Main loop
 def main():
 
     args = myparser()  # load command line options
     metadata = {}  # create dictionary for metadata
-
-    # Utility functions
-    def mk_temp_dir(tempdir, suffix):
-        """takes a root directory and a suffix and creates that \
-        directory, logging progress and returning the path"""
-        fulltemp = os.path.join(tempdir, suffix)
-        logging.info('Creating temporary directory: {}'.format(fulltemp))
-        try:
-            os.mkdir(fulltemp)
-        except IOError:
-            logging.error('could not create temporary \
-                          directory: {}'.format(fulltemp))
-        return fulltemp
 
     # Create the output directory
     if not os.path.isdir(args.output):

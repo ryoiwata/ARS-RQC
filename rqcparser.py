@@ -23,6 +23,26 @@ def _header_lines(file, symbol='#'):
         print("could not open file {}".format(file))
 
 
+def _remove_percent(llist):
+    """removes percent signs from the end of items in list and retuns list"""
+    # this removes the percent sicgnes form columns
+    try:
+        ll = []
+        for item in llist:
+            if isinstance(item, str):
+                if item.endswith('%'):
+                    ll.append(item[:-1].strip())
+                else:
+                    ll.append(item)
+            else:
+                ll.append(item)
+        return ll
+    except RuntimeError:
+        print("could not remove percentages frome some columns, returning the \
+              origional list")
+    return llist
+
+
 def parser_1(file):
     """Converts tabular files with one header line preceded by a # to a
     pandas dataframe then returns a dictionary of that dataframe"""
@@ -51,7 +71,8 @@ def parser_2(file):
         with open(f, 'r') as d1:  # Open the data file
             for n, line in enumerate(d1):  # Read and count lines
                 if n < (hlines - 1):
-                    ll = line.strip().split('\t')
+                    llist = line.strip().split('\t')
+                    ll = _remove_percent(llist)
                     try:
                         if len(ll) == 2:
                                 cleankey = ll[0][1:]

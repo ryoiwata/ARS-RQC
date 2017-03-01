@@ -1,6 +1,5 @@
-#File	/Users/rivers/Documents/RQC/data/reads.fq.gz
-#Total	20000
-#Matched	88	0.44000%
+#File	/var/folders/py/c71jxp_54712mpc0c84zgty40000gn/T/tmpqbfeurvm/filter_contaminants/clean1.fq.gz
+#Total	19692
+#Matched	57	0.28946%
 #Name	Reads	ReadsPct
-Illumina_barcoding_system_Multiplexing_Adapters1_1	87	0.43500%
-v1_5_Small_RNA_3__Adapter	1	0.00500%
+Illumina_barcoding_system_Multiplexing_Adapters1_1	57	0.28946%

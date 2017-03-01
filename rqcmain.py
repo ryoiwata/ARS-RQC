@@ -187,7 +187,7 @@ class Fastq():
         try:
             parameters = ['kmercountexact.sh',
                           'in=' + self.abspath,
-                          'hist=' + os.path.join(outdir, 'kmerhist.txt']
+                          'hist=' + os.path.join(outdir, 'kmerhist.txt')]
             p5a = subprocess.run(parameters, check=True,
                                  stderr=subprocess.PIPE)
             self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
@@ -199,7 +199,7 @@ class Fastq():
                 parameters = ['khist.sh',
                               'in=' + self.abspath,
                               'histcol=2',
-                              'hist=' + os.path.join(outdir, 'kmerhist.txt']
+                              'hist=' + os.path.join(outdir, 'kmerhist.txt')]
                 p5b = subprocess.run(parameters, check=True,
                                      stderr=subprocess.PIPE)
                 self.metadata['calculate_kmer_histogram'] = list(
