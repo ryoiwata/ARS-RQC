@@ -1,4 +1,4 @@
-#!/usr/env/python3
+#!/usr/bin/env python3
 # rqcfilter.py - A sequence quality control and metadata collection workflow
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 import argparse
@@ -9,6 +9,8 @@ import tempfile
 import json
 import shutil
 import rqcmain
+import rqcparser
+
 
 def myparser():
     parser = argparse.ArgumentParser(description='rqcfilter.py - \
@@ -18,14 +20,6 @@ def myparser():
     parser.add_argument('--fastq', '-f', type=str, required=True,
                         help='A .fastq, .fq, .fastq.gz or .fq.gz file.')
 
-    parser.add_argument('--metadata.yaml', '-m', type=argparse.FileType('r'),
-                        help='A yaml formated metadata file. \
-                        See documentation.')
-
-    parser.add_argument('--qcdata', '-qc', type=str, default='qcdata.json',
-                        help='The name of the file containing QC data in \
-                        json format')
-
     parser.add_argument('--output', '-o', type=str, default='rqcout',
                         help='the output directory')
 
@@ -33,18 +27,52 @@ def myparser():
                         default=False,
                         help='A flag to specify if the reads should be mapped  \
                         against human, cat, dog and mouse genomes to find \
-                        contaminants. Default = True.')
+                        contaminants. Default is false.')
 
     parser.add_argument('--paired', '-p', action='store_true', default=False,
                         help='A flag to specify if the fastq file is \
-                        paired and interleaved. Default = True.')
+                        paired and interleaved. Default is false.')
 
+    parser.add_argument('--keepmergeresults', '-m', action='store_true',
+                        default=False, help='A flag to specify whether to keep \
+                        a fastq file with merged reads and a fastq file with \
+                        umerged reads. Defalt is false')
+    parser.add_argument('--keepfullresults', '-k', action='store_true',
+                        default=False, help='A flag to specify whether to keep \
+                        all intermediate files or just the summary log, \
+                        sequence and metadata files')
     args = parser.parse_args()
     return args
 
+
+def write_metadata(datadict, file):
+    try:
+        with open(file, 'w') as f:
+            json.dump(datadict, f)
+    except IOError:
+        print("Could not write json metadata file")
+
+
+def create_clean_name(fastq):
+    try:
+        fastqnamelist = os.path.basename(fastq).split(".")
+        if fastqnamelist[-1] is 'gz' and fastqnamelist[-2] in ('fastq', 'fq'):
+            rqcnamelist = fastqnamelist.insert(-2, 'arsrqc')
+            rqcname = '.'.join(rqcnamelist)
+        elif fastqnamelist[-1] in ('fastq', 'fq'):
+            rqcnamelist = fastqnamelist.insert(-1, 'arsrqc')
+            rqcnamelist.append('gz')
+            rqcname = '.'.join(rqcnamelist)
+            return rqcname
+    except RuntimeError:
+        print("Could not parse the name of the input fastq file. Please \
+        make sure it ends in .fq, .fastq, .fq.gz or .fastq.gz ")
+
+
 def main():
 
-    args = myparser()
+    args = myparser()  # load command line options
+    metadata = {}  # create dictionary for metadata
 
     # Utility functions
     def mk_temp_dir(tempdir, suffix):
@@ -59,71 +87,125 @@ def main():
                           directory: {}'.format(fulltemp))
         return fulltemp
 
-    # Create the final output file
+    # Create the output directory
     if not os.path.isdir(args.output):
         os.mkdir(args.output)
+
+    # Create temporary directory
+    rqctempdir = tempfile.mkdtemp()
 
     # Set up logging
     logging.basicConfig(filename=os.path.join(args.output, 'rqc.log'),
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
-    logging.info('Starting quality control workflow.')
+    logging.info('Starting USDA ARS GBRU rolling quality control workflow.')
 
     # Assign globals
     abs_fastq = os.path.abspath(args.fastq)
 
-    # Create temporary directory
-    rqctempdir = tempfile.mkdtemp()
-
     # Remove contaminants
-    tmp_fc = mk_temp_dir(rqctempdir, 'filter_contaminants')  # make temp dir
+    tmp_fc = mk_temp_dir(rqctempdir, 'filter_contaminants')  # make temp. dir.
     logging.info('Starting contaminant removal')
-    data1 = rqcmain.Fastq(path=abs_fastq)
-    deconfiles = data1.filter_contaminants(outdir=tmp_fc)
-    logging.info(deconfiles)
+    data1 = rqcmain.Fastq(path=abs_fastq)  # create Fastq object
+    decondata = data1.filter_contaminants(outdir=tmp_fc)  # decontaminate
+    metadata['filter_contaminants'] = rqcparser.parse_dir(tmp_fc)  # parse file
+    logging.info(decondata)  # record bbduk output in log
 
     # Trim adaptors
     tmp_ta = mk_temp_dir(rqctempdir, 'trim_adaptors')  # make temp. dir.
     logging.info('Starting adaptor trimming')
-    data2 = rqcmain.Fastq(os.path.join(tmp_fc, 'clean1.fq.gz'))
-    trimfiles = data2.trim_adaptors(outdir=tmp_ta)
-    logging.info(trimfiles)
+    data2 = rqcmain.Fastq(os.path.join(tmp_fc, 'clean1.fq.gz'))  # create fastq
+    trimdata = data2.trim_adaptors(outdir=tmp_ta)  # trim adaptors
+    metadata['trim_adaptors'] = rqcparser.parse_dir(tmp_ta)  # parse data files
+    logging.info(trimdata)  # record output of second bbduk run
 
     # Remove vertebrate contaminants
     if args.removevertebrates:
         tmp_rvc = mk_temp_dir(rqctempdir, 'remove_vertebrate_contaminants')
-        logging.info('Removing dog, cat, mouse and humanreads')
+        logging.info('Removing dog, cat, mouse and human reads')
         # Create new Fastq object
         data3 = rqcmain.Fastq(os.path.join(tmp_ta, 'clean2.fq.gz'))
         if not os.path.isdir(data/dogcatmousehuman/ref):
-            pass  # pass until this is on the server with the references
-            # rqcmain.build_vertebrate_db(cat=data/cat.fa.gz,
-            #                     dog=data/dog.fa.gz,
-            #                     human=data/hg19.fa.gz,
-            #                     mouse=data/mouse.fa.gz,
-            #                     datadir=data/dogcatmousehuman
-        rvcfiles = data3.remove_vertebrate_contaminants(outdir=tmp_rvc)
-        logging.info(rvcfiles)
+            rqcmain.build_vertebrate_db(cat=data/cat.fa.gz,
+                                        dog=data/dog.fa.gz,
+                                        human=data/hg19.fa.gz,
+                                        mouse=data/mouse.fa.gz,
+                                        datadir=data/dogcatmousehuman)
+        rvcdata = data3.remove_vertebrate_contaminants(outdir=tmp_rvc)
+        metadata['remove_vertebrate_contaminants'] = rqcparser.parse_dir(
+                 tmp_rvc)
+        logging.info(rvcdata)
+
+    # Clumpify data (Order reads by overlapping kmers to increase \
+    # compression and processing speed)
+    tmp_cy = mk_temp_dir(rqctempdir, 'clumpify')  # make temp dir
+    logging.info('Starting contaminant removal')
+    if args.removevertebrates:  # Select input file
+        infile = os.path.join(tmp_rvc, 'novert.fq.gz')
+    else:
+        infile = os.path.join(tmp_ta, 'clean2.fq.gz')
+    data4 = rqcmain.Fastq(path=infile)  # create Fastq object
+    clumpdata = data1.clumpify(outdir=tmp_cy)  # clumpify
+    metadata['clumpify'] = rqcparser.parse_dir(tmp_cy)
+    logging.info(clumpdata)
 
     # Merge files
     if args.paired:
         tmp_mr = mk_temp_dir(rqctempdir, 'merge_reads')  # make temp. dir.
         logging.info('Merging read pairs')
-        # determine iput file
-        if args.removevertebrates:
-            infile = os.path.join(tmp_vcr, 'novert.fq.gz')
-        else:
-            infile = os.path.join(tmp_ta,'clean2.fq.gz')
+        data5 = rqcmain.Fastq(os.path.join(tmp_cy, 'clumped.fq.gz'))
+        mergedata = data5.merge_reads(outdir=tmp_mr)
+        metadata['merge_reads'] = rqcparser.parse_dir(tmp_mr)
+        logging.info(mergedata)
 
-        data4 = rqcmain.Fastq(os.path.join(tmp_mr, infile))
-        mergefiles = data4.merge_reads(outdir=tmp_mr)
-        logging.info(mergefiles)
+    # Calculate kmer histogram
+    tmp_kh = mk_temp_dir(rqctempdir, 'calculate_kmer_histogram')
+    logging.info("calculating Kmer Histogram")
+    khdata = data5.calculate_kmer_histogram(outdir=tmp_kh)
+    metadata['calculate_kmer_histogram'] = rqcparser.parse_dir(tmp_kh)
+    logging.info(khdata)
 
-    # For now, copy all files from the tempdir to the output dir
-    logging.info("Copying files from temporary directory to ouput directory")
-    shutil.copytree(rqctempdir, os.path.join(args.output, "output"))
-    shutil.rmtree(rqctempdir)
+    # TODO
+    # Run PreseqR once the interface is setup and the R script has been fixed
+
+    # copy all files from the tempdir to the output dir
+    if args.keepfullresults:
+        # copy all files from the tempdir to the output dir
+        try:
+            logging.info("Copying files from temporary directory to ouput \
+                         directory")
+            shutil.copytree(rqctempdir, os.path.join(args.output, "output"))
+            shutil.rmtree(rqctempdir)
+            logging.info("Writing the metadata to a json file")
+            write_metadata(datadict=metadata,
+                           file=os.path.join(args.output, 'metadata.json'))
+        except RuntimeError:
+            print("could not copy the temproary directory to the ")
+    # Create name for clean file
+    else:
+        try:
+            cleanname = create_clean_name(args.fastq)
+            rqcloc = os.path.join(args.output, cleanname)
+            logging.info("Copying RQC processed fastq to {}".format(rqcloc))
+            shutil.copy2(os.path.join(tmp_cy, 'clumped.fq.gz'), rqcloc)
+            logging.info("Writing the metadata to a json file")
+            write_metadata(datadict=metadata,
+                           file=os.path.join(args.output, 'metadata.json'))
+            if args.keepmergeresults:
+                cm1 = cleanname.split('.')
+                cmm = fastqnamelist.insert(-2, 'merged')
+                cmms = '.'.join(cmm)
+                cmu = fastqnamelist.insert(-2, 'unmerged')
+                cmus = '.'.join(cmus)
+                shutil.copy2(os.path.join(tmp_mr, 'merged.fq.gz'),
+                             os.path.join(args.output, cmms))
+                shutil.copy2(os.path.join(tmp_mr, 'unmerged.fq.gz'),
+                             os.path.join(args.output, cmus))
+        except RuntimeError:
+            print("Could not move all files to the output directory.")
+
     logging.info("Completed RQC run")
+
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,4 @@
-#!/usr/env/python3
+#!/usr/bin/env python3
 # rqcmain.py - The core module for ARS-RQC qulaity control workflow
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 import argparse
@@ -41,6 +41,7 @@ def estimate_kmer_coverage(histogram, outdir):
     except RuntimeError:
         print("Could not estimate kmer coverage beyond current depth \
               using PreseqR")
+
 
 class Fastq():
 
@@ -87,7 +88,8 @@ class Fastq():
                           'in=' + self.abspath,
                           'out=' + os.path.join(outdir, 'clean1.fq.gz'),
                           # Write statistics about  contamininants detected.
-                          'stats=' + os.path.join(outdir, 'scaffoldStats1.txt'),
+                          'stats=' + os.path.join(outdir,
+                                                  'scaffoldStats1.txt'),
                           # Base composition histogram by position
                           'bhist=' + os.path.join(outdir, 'bhist.txt'),
                           #  Quality histogram by position.
@@ -115,7 +117,8 @@ class Fastq():
             bbtoolsdict = self.parse_params()
             parameters = ['bbduk.sh', 'in=' + self.abspath,
                           'out=' + os.path.join(outdir, 'clean2.fq.gz'),
-                          'stats=' + os.path.join(outdir, 'scaffoldStats2.txt')]
+                          'stats=' + os.path.join(outdir,
+                                                  'scaffoldStats2.txt')]
             parameters.extend(bbtoolsdict['trim_adaptors'])
             p2 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
             self.metadata['trim_adaptors'] = list(os.walk(outdir))
@@ -129,12 +132,13 @@ class Fastq():
         try:
             bbtoolsdict = self.parse_params()
             parameters = ['bbmerge.sh', 'in1=' + self.abspath,
-                          'ihist=' + os.path.join(outdir, 'merge_histogram.txt'),
+                          'ihist=' + os.path.join(outdir,
+                                                  'merge_histogram.txt'),
                           'outc=' + os.path.join(outdir, 'cardinality.txt'),
                           'outm=' + os.path.join(outdir, 'merged.fq.gz'),
                           'outu=' + os.path.join(outdir, 'unmerged.fq.gz')]
             parameters.extend(bbtoolsdict['merge_reads'])
-            p3 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            p3 = subprocess.run(parameters, stderr=subprocess.PIPE)
             self.metadata['merge_reads'] = list(os.walk(outdir))
             return p3.stderr.decode('utf-8')
         except RuntimeError:
@@ -150,7 +154,8 @@ class Fastq():
                           'outu=' + os.path.join(outdir, 'novert.fq.gz')]
             parameters.extend(bbtoolsdict['remove_vertebrate_contaminants'])
             p4 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
-            self.metadata['remove_vertebrate_contaminants'] = list(os.walk(outdir))
+            self.metadata['remove_vertebrate_contaminants'] = list(
+                          os.walk(outdir))
             return p4.stderr.decode('utf-8')
         except RuntimeError:
             print("Could not perform vertebrate conaminant removal with bbmap")
@@ -176,52 +181,48 @@ class Fastq():
         finally:
             shutil.rmtree(temp_ordered_dir)
 
-    def calculate_kmer_histogram(self, outdir, k):
+    def calculate_kmer_histogram(self, outdir):
         """calcualtes kmer histogram from a fastq file using BBtools \
         kmercountexact.sh and if that fails, approximates it with khist.sh"""
         try:
-            bbtoolsdict = self.parse_params()
             parameters = ['kmercountexact.sh',
                           'in=' + self.abspath,
-                          'k=' + str(k),
-                          'hist=' + 'k' + str(k) + 'hist.txt']
-            parameters.extend(bbtoolsdict['calculate_kmer_histogram']
-                              ['kmercountexact.sh'])
-            p5a = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
+                          'hist=' + os.path.join(outdir, 'kmerhist.txt']
+            p5a = subprocess.run(parameters, check=True,
+                                 stderr=subprocess.PIPE)
             self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
             return p5a.stderr.decode('utf-8')
         except RuntimeError:
             print("Could not calculate the kmer histogram with \
                   kmerexactcount.sh. Attempting to estimate it with khist.sh")
             try:
-                bbtoolsdict = self.parse_params()
                 parameters = ['khist.sh',
                               'in=' + self.abspath,
-                              'k=' + str(k),
-                              'hist=' + 'k' + str(k) + 'hist.txt']
-                parameters.extend(bbtoolsdict['calculate_kmer_histogram']
-                                  ['khist.sh'])
-                p5b = suborocess.run(parameters, check=True,
+                              'histcol=2',
+                              'hist=' + os.path.join(outdir, 'kmerhist.txt']
+                p5b = subprocess.run(parameters, check=True,
                                      stderr=subprocess.PIPE)
-                self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
+                self.metadata['calculate_kmer_histogram'] = list(
+                              os.walk(outdir))
             except RuntimeError:
                 return p5b.stderr.decode('utf-8')
 
-        def clumpify(self, outdir):
-            """Reorders reads or read pairs in a fastq file by shared kmers. \
-            This reduces the size of compressed files by about 30% \
-            and speeds up kmer-based analyses like de Bruijn assembly by \
-            increasing the use of CPU cashe"""
-            try:
-                btoolsdict = self.parse_params()
-                parameters = ['clumpify.sh',
-                              'in=' + self.abspath,
-                              'out=' + os.path.join(outdir, 'clumped.fq.gz')]
-                parameters.extend(bbtoolsdict['clumpify'])
-                p6 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
-                self.metadata['clumpify'] = list(os.walk(outdir))
-                return p6.stderr.decode('utf-8')
-            except RuntimeError:
-                print("Could not reorder and error correct the data with \
-                      clumpify.sh")
-                return p6.stderr.decode('utf-8')
+    def clumpify(self, outdir):
+        """Reorders reads or read pairs in a fastq file by shared kmers. \
+        This reduces the size of compressed files by about 30% \
+        and speeds up kmer-based analyses like de Bruijn assembly by \
+        increasing the use of CPU cashe"""
+        try:
+            bbtoolsdict = self.parse_params()
+            parameters = ['clumpify.sh',
+                          'in=' + self.abspath,
+                          'out=' + os.path.join(outdir, 'clumped.fq.gz')]
+            parameters.extend(bbtoolsdict['clumpify'])
+            p6 = subprocess.run(parameters, check=True,
+                                stderr=subprocess.PIPE)
+            self.metadata['clumpify'] = list(os.walk(outdir))
+            return p6.stderr.decode('utf-8')
+        except RuntimeError:
+            print("Could not reorder and error correct the data with \
+                  clumpify.sh")
+            return p6.stderr.decode('utf-8')

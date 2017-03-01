@@ -61,7 +61,7 @@
       "unpigz":"true",
       "usejni":"true",
       "zl":"6",
-      "eeco":"t",
+      "ecco":"t",
       "mix":"t",
       "adapters":"data/adapters2.fa"
     },
@@ -86,15 +86,6 @@
       "maxsites":"1",
       "machineout":"true"
     },
-    "calculate_kmer_histogram":{
-      "khist.sh":{
-        "histcol":"2",
-        "k":"31"
-      },
-      "kmercountexact.sh":{
-        "k":"31"
-      }
-    },
     "clumpify":{
       "ecc":"t",
       "passes":"6",
@@ -111,6 +102,7 @@
     "scaffoldStats1.txt":"parser_3",
     "cardnality.txt":"parser_4",
     "merge_histogram.txt":"parser_2",
-    "scaffoldStats2.txt":"parser_3"
+    "scaffoldStats2.txt":"parser_3",
+    "kmerhist.txt":"parser_1"
   }
 }
