@@ -104,7 +104,7 @@ class Fastq():
                           'gchist=' + os.path.join(outdir, 'gchist.txt')
                           ]
             parameters.extend(bbtoolsdict['filter_contaminants'])
-            p1 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            p1 = subprocess.run(parameters, stderr=subprocess.PIPE)
             self.metadata['filter_contaminants'] = list(os.walk(outdir))
             return p1.stderr.decode('utf-8')
         except RuntimeError:
@@ -131,11 +131,11 @@ class Fastq():
         error correct, retuns unmerged reads"""
         try:
             bbtoolsdict = self.parse_params()
-            parameters = ['bbmerge.sh', 'in1=' + self.abspath,
+            parameters = ['bbmerge.sh', 'in=' + self.abspath,
                           'ihist=' + os.path.join(outdir,
                                                   'merge_histogram.txt'),
                           'outc=' + os.path.join(outdir, 'cardinality.txt'),
-                          'outm=' + os.path.join(outdir, 'merged.fq.gz'),
+                          'out=' + os.path.join(outdir, 'merged.fq.gz'),
                           'outu=' + os.path.join(outdir, 'unmerged.fq.gz')]
             parameters.extend(bbtoolsdict['merge_reads'])
             p3 = subprocess.run(parameters, stderr=subprocess.PIPE)

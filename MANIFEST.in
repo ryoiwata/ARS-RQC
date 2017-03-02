@@ -1,0 +1,5 @@
+include README.rst
+include env.sh
+include setup.sh
+include data/*
+include tests/*

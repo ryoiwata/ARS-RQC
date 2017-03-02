@@ -18,7 +18,7 @@
       "statscolumns":"5",
       "zl":"6",
       "cf":"true",
-      "barcodefilter":"crash",
+      "barcodefilter":"false",
       "ow":"true",
       "rqc":"hashmap",
       "loglog":"true",
@@ -62,7 +62,7 @@
       "usejni":"true",
       "zl":"6",
       "ecco":"t",
-      "mix":"t",
+      "mix":"f",
       "adapters":"data/adapters2.fa"
     },
     "build_vertebrate_db":{
