@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(name='ars_rqc',
-      version='0.1',
-      description='A rolling quality control worflow for the USDA Agricultural \
-      Research Service, Geomics and Bioinformatics Research Unit',
+      version='0.1.0.dev1',
+      description='A rolling quality control workflow for the USDA Agricultural \
+      Research Service, Genomics and Bioinformatics Research Unit',
       url='https://github.com/arivers/ars_rqc',
       author='Adam R. Rivers',
       author_email='adam.rivers@ars.usda.gov',
       license='CC0 1.0',
-      packages=['ars_rqc'],
+      packages=find_packages(),
       install_requires=[
-          'pandas'
+          'pandas',
+          'numpy'
           ],
       test_suite='nose.collector',
       tests_require=['nose'],

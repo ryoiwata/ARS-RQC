@@ -7,7 +7,7 @@ import os
 import tempfile
 import filecmp
 import sys
-import rqcmain
+from ars_rqc import rqcmain
 import shutil
 
 class TestfastqMethods(unittest.TestCase):

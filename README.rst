@@ -6,8 +6,8 @@ Inputs
 3. runs BBtools RQC pipeline
 4. collects metadata about the quality of the reads
 5. runs analytics and stores the data
-  * kmer spectrum
-  * GC divergence
-  * GATC by position
-  * insert size
-  * sequence GC distribution
+  - kmer spectrum
+  - GC divergence
+  - GATC by position
+  - insert size
+  - sequence GC distribution

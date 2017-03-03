@@ -8,7 +8,7 @@ import logging
 import tempfile
 import json
 import shutil
-
+from ars_rqc.definitions import ROOT_DIR
 
 def build_vertebrate_db(cat, dog, mouse, human, datadir):
     """Builds a bbsplit.sh database for mapping reads to masked versions of
