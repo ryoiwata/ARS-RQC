@@ -7,7 +7,7 @@ import pandas as pd
 import numpy as np
 import tempfile
 import os
-
+from ars_rqc.definitions import ROOT_DIR
 
 def _header_lines(file, symbol='#'):
     """returns number of header lines at the beginning of a file"""
@@ -133,7 +133,7 @@ def parser_4(file):
 def _select_pfunc(file):
     try:
         fbase = os.path.basename(file)
-        with open("data/parameters.json", 'r') as p:
+        with open(os.path.join(ROOT_DIR, 'data', 'parameters.json'), 'r') as p:
             fastq_parameters = json.load(p)
             if fbase in fastq_parameters["parser"]:
                 pfunc = fastq_parameters["parser"][fbase]

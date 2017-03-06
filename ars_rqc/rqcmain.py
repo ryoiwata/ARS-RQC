@@ -43,6 +43,17 @@ def estimate_kmer_coverage(histogram, outdir):
               using PreseqR")
 
 
+def _parse_path_list(list1):
+    list2 = []
+    for item in list1:
+        list2.append(os.path.join(ROOT_DIR, item))
+    return list2
+
+
+def _parse_path_str(str1):
+    return os.path.join(ROOT_DIR, str1)
+
+
 class Fastq():
 
     @classmethod
@@ -50,7 +61,7 @@ class Fastq():
         """converts parameters from a json file into a dictionary formatted
         for use by bbtools"""
         try:
-            with open("data/parameters.json", 'r') as p:
+            with open(os.path.join(ROOT_DIR, "data", "parameters.json"), 'r') as p:
                 fastq_parameters = json.load(p)
             bbtoolsdict = {}
             for key in fastq_parameters["rqcfilter"]:
@@ -58,15 +69,26 @@ class Fastq():
                 for key2 in fastq_parameters["rqcfilter"][key]:
                     if isinstance(fastq_parameters["rqcfilter"][key][key2],
                                   str):
-                        bbtoolsdict[key].append(str(key2) + "=" +
+                        if key2 in ('ref', 'adapters'):
+                            val = _parse_path_str(fastq_parameters
+                            ["rqcfilter"][key][key2])
+                            bbtoolsdict[key].append(str(key2) + "=" + val)
+                        else:
+                            bbtoolsdict[key].append(str(key2) + "=" +
                                                 str(fastq_parameters
                                                 ["rqcfilter"][key][key2]))
                     elif isinstance(fastq_parameters["rqcfilter"][key][key2],
                                     list):
-                        bbtoolsdict[key].append(str(key2) + "=" +
-                                                ",".join(fastq_parameters
-                                                         ["rqcfilter"]
-                                                         [key][key2]))
+                        if key2 in ('ref', 'adapters'):
+                            val = _parse_path_list(fastq_parameters
+                                     ["rqcfilter"][key][key2])
+                            bbtoolsdict[key].append(str(key2) + "=" +
+                                                    ",".join(val))
+                        else:
+                            bbtoolsdict[key].append(str(key2) + "=" +
+                                                    ",".join(fastq_parameters
+                                                             ["rqcfilter"]
+                                                             [key][key2]))
             return bbtoolsdict
         except RuntimeError:
                 print("Could not load and parse the parameters.json file \
@@ -120,7 +142,7 @@ class Fastq():
                           'stats=' + os.path.join(outdir,
                                                   'scaffoldStats2.txt')]
             parameters.extend(bbtoolsdict['trim_adaptors'])
-            p2 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            p2 = subprocess.run(parameters, stderr=subprocess.PIPE)
             self.metadata['trim_adaptors'] = list(os.walk(outdir))
             return p2.stderr.decode('utf-8')
         except RuntimeError:
@@ -153,7 +175,7 @@ class Fastq():
                           'in=' + self.abspath,
                           'outu=' + os.path.join(outdir, 'novert.fq.gz')]
             parameters.extend(bbtoolsdict['remove_vertebrate_contaminants'])
-            p4 = suborocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            p4 = suborocess.run(parameters, stderr=subprocess.PIPE)
             self.metadata['remove_vertebrate_contaminants'] = list(
                           os.walk(outdir))
             return p4.stderr.decode('utf-8')
@@ -172,7 +194,7 @@ class Fastq():
             tfile = os.path.join(temp_ordered_dir, 'sorted.fq')
             parameters = ['sortbyname.sh', 'in=' + self.abspath,
                           'out=' + tfile]
-            p5 = subprocess.run(parameters, check=True, stderr=subprocess.PIPE)
+            p5 = subprocess.run(parameters, stderr=subprocess.PIPE)
             shutil.move(tfile, os.path.join(root, uc))
             return p5.stderr.decode('utf-8')
         except RuntimeError:
@@ -188,8 +210,7 @@ class Fastq():
             parameters = ['kmercountexact.sh',
                           'in=' + self.abspath,
                           'hist=' + os.path.join(outdir, 'kmerhist.txt')]
-            p5a = subprocess.run(parameters, check=True,
-                                 stderr=subprocess.PIPE)
+            p5a = subprocess.run(parameters, stderr=subprocess.PIPE)
             self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
             return p5a.stderr.decode('utf-8')
         except RuntimeError:
@@ -200,8 +221,7 @@ class Fastq():
                               'in=' + self.abspath,
                               'histcol=2',
                               'hist=' + os.path.join(outdir, 'kmerhist.txt')]
-                p5b = subprocess.run(parameters, check=True,
-                                     stderr=subprocess.PIPE)
+                p5b = subprocess.run(parameters, stderr=subprocess.PIPE)
                 self.metadata['calculate_kmer_histogram'] = list(
                               os.walk(outdir))
             except RuntimeError:
@@ -218,7 +238,7 @@ class Fastq():
                           'in=' + self.abspath,
                           'out=' + os.path.join(outdir, 'clumped.fq.gz')]
             parameters.extend(bbtoolsdict['clumpify'])
-            p6 = subprocess.run(parameters, check=True,
+            p6 = subprocess.run(parameters,
                                 stderr=subprocess.PIPE)
             self.metadata['clumpify'] = list(os.walk(outdir))
             return p6.stderr.decode('utf-8')

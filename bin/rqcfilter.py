@@ -10,6 +10,7 @@ import json
 import shutil
 from ars_rqc import rqcmain
 from ars_rqc import rqcparser
+from ars_rqc.definitions import ROOT_DIR
 
 
 # Utility functions
