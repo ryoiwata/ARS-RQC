@@ -8,7 +8,7 @@ import numpy as np
 import tempfile
 import os
 from ars_rqc.definitions import ROOT_DIR
-
+from collections import OrderedDict
 def _header_lines(file, symbol='#'):
     """returns number of header lines at the beginning of a file"""
     try:
@@ -25,7 +25,7 @@ def _header_lines(file, symbol='#'):
 
 def _remove_percent(llist):
     """removes percent signs from the end of items in list and retuns list"""
-    # this removes the percent sicgnes form columns
+    # this removes the percent signs from columns
     try:
         ll = []
         for item in llist:
@@ -53,7 +53,8 @@ def parser_1(file):
         if dta.columns[0].startswith('#'):
             dta.rename(columns={dta.columns[0]: dta.columns[0][1:]},
                        inplace=True)
-        return dta.to_dict()
+        d = dta.to_dict()
+        return OrderedDict(sorted(d.items(), key=lambda t: t[0]))
     except RuntimeError:
         print("could not parse the file {}".format(file))
 

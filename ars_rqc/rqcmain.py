@@ -231,7 +231,7 @@ class Fastq():
         """Reorders reads or read pairs in a fastq file by shared kmers. \
         This reduces the size of compressed files by about 30% \
         and speeds up kmer-based analyses like de Bruijn assembly by \
-        increasing the use of CPU cashe"""
+        increasing the use of CPU cache"""
         try:
             bbtoolsdict = self.parse_params()
             parameters = ['clumpify.sh',
