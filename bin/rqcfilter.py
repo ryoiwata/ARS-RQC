@@ -4,10 +4,12 @@
 import argparse
 import os
 import subprocess
+import shutil
 import logging
 import tempfile
 import json
 import shutil
+import sys
 from ars_rqc import rqcmain
 from ars_rqc import rqcparser
 from ars_rqc.definitions import ROOT_DIR
@@ -72,6 +74,8 @@ def myparser():
 
     parser.add_argument('--output', '-o', type=str, default='rqcout',
                         help='the output directory')
+    parser.add_argument('--overwrite', '-w', action='store_true', default=False,
+                        help='a flag to overwrite the output directory')
 
     parser.add_argument('--removevertebrates', '-r', action='store_true',
                         default=False,
@@ -102,8 +106,17 @@ def main():
     metadata = {}  # create dictionary for metadata
 
     # Create the output directory
-    if not os.path.isdir(args.output):
-        os.mkdir(args.output)
+    if args.overwrite:
+        if os.path.exists(args.output):
+            shutil.rmtree(args.output)
+            os.makedirs(args.output)
+        else:
+            os.makedirs(args.output)
+    else:  # overwrite is false
+        if os.path.exists(args.output):
+            raise IOError('The ouput directory already exists, check the output flag')
+        else:
+            os.makedirs(args.output)
 
     # Create temporary directory
     rqctempdir = tempfile.mkdtemp()

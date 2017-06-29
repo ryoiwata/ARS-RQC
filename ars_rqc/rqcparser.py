@@ -30,8 +30,8 @@ def _remove_percent(llist):
         ll = []
         for item in llist:
             if isinstance(item, str):
-                if item.endswith('%'):
-                    ll.append(item[:-1].strip())
+                if item.strip().endswith('%'):
+                    ll.append(item.strip()[:-1])
                 else:
                     ll.append(item)
             else:
@@ -102,7 +102,8 @@ def parser_3(file):
         tf = tempfile.NamedTemporaryFile(delete=False, mode='w')
         with open(f, 'r') as d1:  # Open the data file
             for n, line in enumerate(d1):  # Read and count lines
-                ll = line.strip().split('\t')
+                llist = line.strip().split('\t')
+                ll = _remove_percent(llist)
                 if n == 0:
                     continue
                 if n == 1:
