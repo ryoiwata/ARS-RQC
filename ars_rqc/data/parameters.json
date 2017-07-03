@@ -100,9 +100,9 @@
     "qchist.txt":"parser_1",
     "qhist.txt":"parser_1",
     "scaffoldStats1.txt":"parser_3",
-    "cardnality.txt":"parser_4",
+    "cardnality.txt":"parser_5",
     "merge_histogram.txt":"parser_2",
-    "scaffoldStats2.txt":"parser_3",
+    "scaffoldStats2.txt":"parser_4",
     "kmerhist.txt":"parser_1"
   }
 }

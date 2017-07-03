@@ -3,10 +3,10 @@
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 
 import pandas as pd
+import json
 import numpy as np
 import os
 from ars_rqc.definitions import ROOT_DIR
-from collections import OrderedDict
 
 
 def _header_lines(file, symbol='#'):
@@ -43,9 +43,9 @@ def _remove_percent(llist):
     return llist
 
 
-def parser_1(file):
-    """Converts tabular files with any number of # commented lines followed by \
-    a header line with a leading # to a pandas dataframe then returns that
+def _parser_1(file):
+    """Takes a file awith any number of # commented lines followed by \
+    a header line with a leading # and returns a dictionary containing a pandas
     dataframe"""
     try:
         f = os.path.abspath(file)
@@ -53,16 +53,16 @@ def parser_1(file):
         dta = pd.read_csv(f, sep="\t", skiprows=hlines-1, comment=None)
         if dta.columns[0].startswith('#'):
             dta = dta.rename(index=str, columns={dta.columns[0]: dta.columns[0][1:]})
-        return dta
+        return {"dataframe": dta}
     except RuntimeError:
         print("could not parse the file {}".format(file))
 
 
-def parser_2(file):
+def _parser_2(file):
     """Reads files with preliminary lines of key-value data
     prefixed by a # followed by one header line preceded by a #, followed by
     tabular data. Converts tabular data to pandas dataframe then returns a
-    a dictionary of the key-value data and a pandas dataframe"""
+    a dictionary with the key-value data and a pandas dataframe"""
     try:
         f = os.path.abspath(file)
         hlines = _header_lines(f)  # Count number of header lines
@@ -81,15 +81,15 @@ def parser_2(file):
                               line {}".format(str(n+1)))
                 else:
                     break
-        dataframe = parser_1(file)
-        return ddict, dataframe
+        dataframe = _parser_1(file)["dataframe"]
+        return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
         print("Could not parse file {}".format(file))
 
 
-def parser_3(file):
-    """Converts bbduk scaffold report files to a dictionary and a pandas
-    dataframe"""
+def _parser_3(file):
+    """Converts bbduk filter contaminants scaffold report files to a dictionary
+    containing descriptive statistics and a pandas dataframe"""
     try:
         f = os.path.abspath(file)
         hlines = _header_lines(f)  # Count number of header lines
@@ -98,6 +98,7 @@ def parser_3(file):
             for n, line in enumerate(d1):  # Read and count lines
                 llist = line.strip().split('\t')
                 ll = _remove_percent(llist)
+                print(ll)
                 if n == 0:
                     continue
                 if n == 1:
@@ -108,19 +109,46 @@ def parser_3(file):
                     ddict["PctReadsMatched"] = ll[2]
                 else:
                     break
-        dataframe = parser_1(file)
+        dataframe = _parser_1(file)["dataframe"]
         dataframe.ReadsPct = pd.to_numeric(dataframe.ReadsPct.str.strip("%"))
         dataframe.BasesPct = pd.to_numeric(dataframe.BasesPct.str.strip("%"))
-        return ddict, dataframe
+        return {"desc": ddict, "dataframe": dataframe}
+    except RuntimeError:
+        print("Could not parse file {}".format(file))
+
+def _parser_4(file):
+    """Converts bbduk trim adaptor report files to a dictionary containing
+    descriptive statistics and a pandas dataframe"""
+    try:
+        f = os.path.abspath(file)
+        hlines = _header_lines(f)  # Count number of header lines
+        ddict = {}  # Create temporary dictionary
+        with open(f, 'r') as d1:  # Open the data file
+            for n, line in enumerate(d1):  # Read and count lines
+                llist = line.strip().split('\t')
+                ll = _remove_percent(llist)
+                print(ll)
+                if n == 0:
+                    continue
+                if n == 1:
+                    ddict["TotalReads"] = ll[1]
+                elif n == 2:
+                    ddict["ReadsMatched"] = ll[1]
+                    ddict["PctReadsMatched"] = ll[2]
+                else:
+                    break
+        dataframe = _parser_1(file)["dataframe"]
+        dataframe.ReadsPct = pd.to_numeric(dataframe.ReadsPct.str.strip("%"))
+        return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
         print("Could not parse file {}".format(file))
 
 
-def parser_4(file):
+def _parser_5(file):
     with open(os.path.abspath(file), 'r') as f:
         value = f.readline().strip()
         pname = os.path.basename(file).split(".")[0]
-        return {pname: value}
+        return {"desc": {pname: value}}
 
 
 def _select_pfunc(file):
@@ -130,7 +158,7 @@ def _select_pfunc(file):
             fastq_parameters = json.load(p)
             if fbase in fastq_parameters["parser"]:
                 pfunc = fastq_parameters["parser"][fbase]
-                return pfunc
+                return "_" + str(pfunc)
             else:
                 return None
     except IOError:
@@ -144,18 +172,20 @@ def parse_dir(dir):
     bname = os.path.basename(dir)
     print(bname)
     ddict = {}
-    for file in os.listdir(dir):
-        ffile = os.path.join(dir, file)
-        try:
-            pfunc = _select_pfunc(ffile)
-            if pfunc:
-                command = str(pfunc) + '("' + str(ffile) + '")'
-                result = eval(command)
-                ddict[file] = result
-            else:
-                print ("skipping file {}".format(ffile))
+    for root, dirs, files in os.walk(dir, topdown=False):
+        for name in files:
+            filepath = (os.path.join(root, name))
+            try:
+                pfunc = _select_pfunc(name)
+                if pfunc:
+                    command = str(pfunc) + '("' + str(filepath) + '")'
+                    result = eval(command)
+                    ddict[name] = result
+                    print("processing file {}".format(filepath))
+                else:
+                    print ("skipping file {}".format(filepath))
+                    continue
+            except IOError:
+                print("could not parse file {}".format(filepath))
                 continue
-        except IOError:
-            print("could not parse file {}".format(ffile))
-            continue
     return ddict

@@ -10,12 +10,21 @@ import tempfile
 import json
 import shutil
 import sys
+import pandas as pd
 from ars_rqc import rqcmain
 from ars_rqc import rqcparser
 from ars_rqc.definitions import ROOT_DIR
 
 
 # Utility functions
+
+# this extends the json class to handle pandas dataframes within dictionaries
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'to_json'):
+            return obj.to_json(orient='records')
+        return json.JSONEncoder.default(self, obj)
+
 def convert_keys_to_string(dictionary):
     """Recursively converts dictionary keys to strings."""
     if not isinstance(dictionary, dict):
@@ -24,12 +33,15 @@ def convert_keys_to_string(dictionary):
                 for k, v in dictionary.items())
 
 
-def write_metadata(datadict, file):
+def write_metadata(indir, outfile):
     """Writes dictionary to json file"""
-    ddc = convert_keys_to_string(datadict)
     try:
-        with open(file, 'w') as f:
-            json.dump(obj=ddc, fp=f, default=str)
+        datadict = rqcparser.parse_dir(indir)
+    except RuntimeError:
+        print("Could not parse bbtools output file(s)")
+    try:
+        with open(outfile, 'w') as fp:
+            json.dump(datadict, fp, cls=JSONEncoder)
     except IOError:
         print("Could not write json metadata file")
 
@@ -103,18 +115,18 @@ def myparser():
 def main():
 
     args = myparser()  # load command line options
-    metadata = {}  # create dictionary for metadata
 
     # Create the output directory
-    if args.overwrite:
+    if args.overwrite:  # if overwrite is true:
         if os.path.exists(args.output):
             shutil.rmtree(args.output)
             os.makedirs(args.output)
         else:
             os.makedirs(args.output)
-    else:  # overwrite is false
+    else:  # if overwrite is false:
         if os.path.exists(args.output):
-            raise IOError('The ouput directory already exists, check the output flag')
+            raise IOError('The ouput directory already exists, check the \
+                          output flag')
         else:
             os.makedirs(args.output)
 
@@ -135,7 +147,6 @@ def main():
     logging.info('Starting contaminant removal')
     data1 = rqcmain.Fastq(path=abs_fastq)  # create Fastq object
     decondata = data1.filter_contaminants(outdir=tmp_fc)  # decontaminate
-    metadata['filter_contaminants'] = rqcparser.parse_dir(tmp_fc)  # parse file
     logging.info(decondata)  # record bbduk output in log
 
     # Trim adaptors
@@ -143,7 +154,6 @@ def main():
     logging.info('Starting adaptor trimming')
     data2 = rqcmain.Fastq(os.path.join(tmp_fc, 'clean1.fq.gz'))  # create fastq
     trimdata = data2.trim_adaptors(outdir=tmp_ta)  # trim adaptors
-    metadata['trim_adaptors'] = rqcparser.parse_dir(tmp_ta)  # parse data files
     logging.info(trimdata)  # record output of second bbduk run
 
     # Remove vertebrate contaminants
@@ -159,8 +169,6 @@ def main():
                                         mouse=data/mouse.fa.gz,
                                         datadir=data/dogcatmousehuman)
         rvcdata = data3.remove_vertebrate_contaminants(outdir=tmp_rvc)
-        metadata['remove_vertebrate_contaminants'] = rqcparser.parse_dir(
-                 tmp_rvc)
         logging.info(rvcdata)
 
     # Clumpify data (Order reads by overlapping kmers to increase \
@@ -173,7 +181,6 @@ def main():
         infile = os.path.join(tmp_ta, 'clean2.fq.gz')
     data4 = rqcmain.Fastq(path=infile)  # create Fastq object
     clumpdata = data1.clumpify(outdir=tmp_cy)  # clumpify
-    metadata['clumpify'] = rqcparser.parse_dir(tmp_cy)
     logging.info(clumpdata)
 
     # Merge files
@@ -182,14 +189,12 @@ def main():
         logging.info('Merging read pairs')
         data5 = rqcmain.Fastq(os.path.join(tmp_cy, 'clumped.fq.gz'))
         mergedata = data5.merge_reads(outdir=tmp_mr)
-        metadata['merge_reads'] = rqcparser.parse_dir(tmp_mr)
         logging.info(mergedata)
 
     # Calculate kmer histogram
     tmp_kh = mk_temp_dir(rqctempdir, 'calculate_kmer_histogram')
     logging.info("calculating Kmer Histogram")
     khdata = data5.calculate_kmer_histogram(outdir=tmp_kh)
-    metadata['calculate_kmer_histogram'] = rqcparser.parse_dir(tmp_kh)
     logging.info(khdata)
 
     # TODO
@@ -202,10 +207,10 @@ def main():
             logging.info("Copying files from temporary directory to ouput \
                          directory")
             shutil.copytree(rqctempdir, os.path.join(args.output, "output"))
+            logging.info("Parsing the metadata and writing it to a json file")
+            write_metadata(indir=rqctempdir,
+                           outfile=os.path.join(args.output, 'metadata.json'))
             shutil.rmtree(rqctempdir)
-            logging.info("Writing the metadata to a json file")
-            write_metadata(datadict=metadata,
-                           file=os.path.join(args.output, 'metadata.json'))
         except RuntimeError:
             print("could not copy the temproary directory to the ")
     # Create name for clean file
@@ -215,9 +220,9 @@ def main():
             rqcloc = os.path.join(args.output, cleanname)
             logging.info("Copying RQC processed fastq to {}".format(rqcloc))
             shutil.copy2(os.path.join(tmp_cy, 'clumped.fq.gz'), rqcloc)
-            logging.info("Writing the metadata to a json file")
-            write_metadata(datadict=metadata,
-                           file=os.path.join(args.output, 'metadata.json'))
+            logging.info("Parsing the metadata and writing it to a json file")
+            write_metadata(indir=rqctempdir,
+                           outfile=os.path.join(args.output, 'metadata.json'))
             if args.keepmergeresults:
                 cm1 = cleanname.split('.')
                 cmm = fastqnamelist.insert(-2, 'merged')
