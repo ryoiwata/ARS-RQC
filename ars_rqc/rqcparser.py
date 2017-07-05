@@ -38,22 +38,39 @@ def _remove_percent(llist):
                 ll.append(item)
         return ll
     except RuntimeError:
-        print("could not remove percentages frome some columns, returning the \
-              origional list")
+        print("Could not remove percentages frome some columns, returning the \
+              origional list.")
     return llist
 
+def rmdfpct(df):
+    """Removes percents from columns in data frames repalcing them with
+    numeric values"""
+    for col in df:
+        qc = "df." + col + ".dtype"
+        try:
+            if eval(qc) == 'O':
+                qry = 'df.' + col + '.str.strip("%")'
+                df[col] = pd.to_numeric(eval(qry))
+        except:
+            print("could not evaluate a column in {}".format(df))
+            continue
+    return df
 
 def _parser_1(file):
-    """Takes a file awith any number of # commented lines followed by \
-    a header line with a leading # and returns a dictionary containing a pandas
-    dataframe"""
+    """Takes a file awith any number of # commented lines followed by
+    a header line with a leading # and returns a dictionary containing a list
+    oriented dictionary of a pandas dataframe."""
     try:
         f = os.path.abspath(file)
         hlines = _header_lines(f)
         dta = pd.read_csv(f, sep="\t", skiprows=hlines-1, comment=None)
+        # Remove # from the forst header row
         if dta.columns[0].startswith('#'):
-            dta = dta.rename(index=str, columns={dta.columns[0]: dta.columns[0][1:]})
-        return {"dataframe": dta}
+            dta = dta.rename(index=str, columns={dta.columns[0]:
+                             dta.columns[0][1:]})
+        # remove percent signs from data columns and convert to integer type
+        dta = rmdfpct(dta)
+        return {"dataframe": dta.to_dict(orient='list')}
     except RuntimeError:
         print("could not parse the file {}".format(file))
 
@@ -62,7 +79,8 @@ def _parser_2(file):
     """Reads files with preliminary lines of key-value data
     prefixed by a # followed by one header line preceded by a #, followed by
     tabular data. Converts tabular data to pandas dataframe then returns a
-    a dictionary with the key-value data and a pandas dataframe"""
+    a dictionary with the key-value data and a list oriented dictionary of the
+    pandas dataframe."""
     try:
         f = os.path.abspath(file)
         hlines = _header_lines(f)  # Count number of header lines
@@ -89,7 +107,8 @@ def _parser_2(file):
 
 def _parser_3(file):
     """Converts bbduk filter contaminants scaffold report files to a dictionary
-    containing descriptive statistics and a pandas dataframe"""
+    containing descriptive statistics and a list oriented dictionary of a
+    pandas dataframe."""
     try:
         f = os.path.abspath(file)
         hlines = _header_lines(f)  # Count number of header lines
@@ -98,7 +117,6 @@ def _parser_3(file):
             for n, line in enumerate(d1):  # Read and count lines
                 llist = line.strip().split('\t')
                 ll = _remove_percent(llist)
-                print(ll)
                 if n == 0:
                     continue
                 if n == 1:
@@ -110,8 +128,6 @@ def _parser_3(file):
                 else:
                     break
         dataframe = _parser_1(file)["dataframe"]
-        dataframe.ReadsPct = pd.to_numeric(dataframe.ReadsPct.str.strip("%"))
-        dataframe.BasesPct = pd.to_numeric(dataframe.BasesPct.str.strip("%"))
         return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
         print("Could not parse file {}".format(file))
@@ -127,7 +143,6 @@ def _parser_4(file):
             for n, line in enumerate(d1):  # Read and count lines
                 llist = line.strip().split('\t')
                 ll = _remove_percent(llist)
-                print(ll)
                 if n == 0:
                     continue
                 if n == 1:
@@ -138,7 +153,6 @@ def _parser_4(file):
                 else:
                     break
         dataframe = _parser_1(file)["dataframe"]
-        dataframe.ReadsPct = pd.to_numeric(dataframe.ReadsPct.str.strip("%"))
         return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
         print("Could not parse file {}".format(file))
@@ -170,7 +184,6 @@ def parse_dir(dir):
     """ takes a file path looks the file name up in the parameters file and \
     returns a dataframe"""
     bname = os.path.basename(dir)
-    print(bname)
     ddict = {}
     for root, dirs, files in os.walk(dir, topdown=False):
         for name in files:

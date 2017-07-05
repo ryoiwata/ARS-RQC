@@ -11,6 +11,7 @@ import json
 import shutil
 import sys
 import pandas as pd
+import numpy as np
 from ars_rqc import rqcmain
 from ars_rqc import rqcparser
 from ars_rqc.definitions import ROOT_DIR
@@ -18,12 +19,17 @@ from ars_rqc.definitions import ROOT_DIR
 
 # Utility functions
 
-# this extends the json class to handle pandas dataframes within dictionaries
-class JSONEncoder(json.JSONEncoder):
+# this extends the json class to handle numpy types in dictionaries
+class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
-        if hasattr(obj, 'to_json'):
-            return obj.to_json(orient='records')
-        return json.JSONEncoder.default(self, obj)
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(MyEncoder, self).default(obj)
 
 def convert_keys_to_string(dictionary):
     """Recursively converts dictionary keys to strings."""
@@ -41,7 +47,7 @@ def write_metadata(indir, outfile):
         print("Could not parse bbtools output file(s)")
     try:
         with open(outfile, 'w') as fp:
-            json.dump(datadict, fp, cls=JSONEncoder)
+            json.dump(datadict, fp, cls=NumpyEncoder)
     except IOError:
         print("Could not write json metadata file")
 
