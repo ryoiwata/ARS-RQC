@@ -203,6 +203,13 @@ def main():
     khdata = data5.calculate_kmer_histogram(outdir=tmp_kh)
     logging.info(khdata)
 
+    # estimate taxonomy
+    tmp_tax = mk_temp_dir(rqctempdir, 'assign_taxonomy')
+    logging.info("Estimateing the taxonomic composition using BBtools \
+                 Sendsketch, a Minhash based taxonimoc assignment algorithm ")
+    taxdata = data5.assign_taxonomy(outdir=tmp_tax)
+    logging.info(taxdata)
+
     # TODO
     # Run PreseqR once the interface is setup and the R script has been fixed
 

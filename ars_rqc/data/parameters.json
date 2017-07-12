@@ -90,6 +90,11 @@
       "ecc":"t",
       "passes":"6",
       "zl":"8"
+    },
+    "assign_taxonomy":{
+      "k":"31",
+      "autosize":"true",
+      "reads":"400000"
     }
   },
   "parser":{
@@ -103,6 +108,7 @@
     "cardnality.txt":"parser_5",
     "merge_histogram.txt":"parser_2",
     "scaffoldStats2.txt":"parser_4",
-    "kmerhist.txt":"parser_1"
+    "kmerhist.txt":"parser_1",
+    "taxonomy.txt": "parser_6"
   }
 }

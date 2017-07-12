@@ -6,6 +6,7 @@ import pandas as pd
 import json
 import numpy as np
 import os
+import logging
 from ars_rqc.definitions import ROOT_DIR
 
 
@@ -52,7 +53,7 @@ def rmdfpct(df):
                 qry = 'df.' + col + '.str.strip("%")'
                 df[col] = pd.to_numeric(eval(qry))
         except:
-            print("could not evaluate a column in {}".format(df))
+            logging.warn("could not evaluate a column in the dataframe")
             continue
     return df
 
@@ -64,15 +65,15 @@ def _parser_1(file):
         f = os.path.abspath(file)
         hlines = _header_lines(f)
         dta = pd.read_csv(f, sep="\t", skiprows=hlines-1, comment=None)
-        # Remove # from the forst header row
+        # Remove # from the first header row if present
         if dta.columns[0].startswith('#'):
             dta = dta.rename(index=str, columns={dta.columns[0]:
                              dta.columns[0][1:]})
-        # remove percent signs from data columns and convert to integer type
+        # remove percent signs from data columns
         dta = rmdfpct(dta)
         return {"dataframe": dta.to_dict(orient='list')}
     except RuntimeError:
-        print("could not parse the file {}".format(file))
+        logging.error("could not parse the file {}".format(file))
 
 
 def _parser_2(file):
@@ -102,7 +103,7 @@ def _parser_2(file):
         dataframe = _parser_1(file)["dataframe"]
         return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
-        print("Could not parse file {}".format(file))
+        logging.error("Could not parse file {}".format(file))
 
 
 def _parser_3(file):
@@ -130,7 +131,7 @@ def _parser_3(file):
         dataframe = _parser_1(file)["dataframe"]
         return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
-        print("Could not parse file {}".format(file))
+        logging.error("Could not parse file {}".format(file))
 
 def _parser_4(file):
     """Converts bbduk trim adaptor report files to a dictionary containing
@@ -155,7 +156,7 @@ def _parser_4(file):
         dataframe = _parser_1(file)["dataframe"]
         return {"desc": ddict, "dataframe": dataframe}
     except RuntimeError:
-        print("Could not parse file {}".format(file))
+        logging.error("Could not parse file {}".format(file))
 
 
 def _parser_5(file):
@@ -163,6 +164,31 @@ def _parser_5(file):
         value = f.readline().strip()
         pname = os.path.basename(file).split(".")[0]
         return {"desc": {pname: value}}
+
+def _parser_6(file):
+    """Reads sendsketch files"""
+    try:
+        f = os.path.abspath(file)
+        ddict = {}  # Create temporary dictionary
+        with open(f, 'r') as d1:  # Open the data file
+            for n, line in enumerate(d1):  # Read and count lines
+                if n == 1:
+                    llist = line.strip().split('\t')
+                    newlist = []
+                    for j in llist:
+                        ml = j.split(': ')
+                        for k in ml:
+                            newlist.extend([k])
+                    ddict[newlist[2]] = int(newlist[3])
+                    ddict[newlist[4]] = int(newlist[5])
+                    ddict[newlist[6]] = int(newlist[7])
+                    ddict[newlist[8]] = int(newlist[9])
+                    break
+        dta = pd.read_csv(f, sep="\t", skiprows=2, comment=None)
+        dta = rmdfpct(dta)
+        return {"desc": ddict, "dataframe": dta.to_dict(orient='list')}
+    except RuntimeError:
+        logging.error("Could not parse file {}".format(file))
 
 
 def _select_pfunc(file):
@@ -176,7 +202,7 @@ def _select_pfunc(file):
             else:
                 return None
     except IOError:
-        print("Could not determine the correct parsing function to use for the \
+        logging.error("Could not determine the correct parsing function to use for the \
               file {}. Check the paramaters.json file".format(file))
 
 
@@ -194,11 +220,11 @@ def parse_dir(dir):
                     command = str(pfunc) + '("' + str(filepath) + '")'
                     result = eval(command)
                     ddict[name] = result
-                    print("processing file {}".format(filepath))
+                    logging.info("processing file {}".format(filepath))
                 else:
-                    print ("skipping file {}".format(filepath))
+                    logging.info("skipping file {}".format(filepath))
                     continue
             except IOError:
-                print("could not parse file {}".format(filepath))
+                logging.error("could not parse file {}".format(filepath))
                 continue
     return ddict

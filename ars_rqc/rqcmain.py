@@ -246,3 +246,18 @@ class Fastq():
             print("Could not reorder and error correct the data with \
                   clumpify.sh")
             return p6.stderr.decode('utf-8')
+
+    def assign_taxonomy(self, outdir):
+        """merge reads to generate insert size histogram and \
+        error correct, retuns unmerged reads"""
+        try:
+            bbtoolsdict = self.parse_params()
+            parameters = ['sendsketch.sh', 'in=' + self.abspath,
+                          'out=' + os.path.join(outdir, 'taxonomy.txt'),
+                          ]
+            parameters.extend(bbtoolsdict['assign_taxonomy'])
+            p3 = subprocess.run(parameters, stderr=subprocess.PIPE)
+            self.metadata['assign_taxonomy'] = list(os.walk(outdir))
+            return p3.stderr.decode('utf-8')
+        except RuntimeError:
+            print("could not estimate the taxonomic composition with sendsketch")
