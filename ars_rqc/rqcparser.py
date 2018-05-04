@@ -11,15 +11,14 @@ from ars_rqc.definitions import ROOT_DIR
 
 
 def _header_lines(file, symbol='#'):
-    """returns number of header lines at the beginning of a file"""
+    """returns number of header lines at the beginning of a file and the total number of lines"""
     try:
         with open(file, 'r') as f:
             lc = 0
-            for line in f:
+            for n, line in enumerate(f):
                 if line.startswith(symbol):
                     lc += 1
-                else:
-                    return lc
+            return lc, n + 1
     except IOError:
         print("could not open file {}".format(file))
 
@@ -63,8 +62,11 @@ def _parser_1(file):
     oriented dictionary of a pandas dataframe."""
     try:
         f = os.path.abspath(file)
-        hlines = _header_lines(f)
+        hlines, totlines = _header_lines(f)
+        if hlines==totlines:
+            return {"dataframe": None}
         dta = pd.read_csv(f, sep="\t", skiprows=hlines-1, comment=None)
+        
         # Remove # from the first header row if present
         if dta.columns[0].startswith('#'):
             dta = dta.rename(index=str, columns={dta.columns[0]:
@@ -84,7 +86,7 @@ def _parser_2(file):
     pandas dataframe."""
     try:
         f = os.path.abspath(file)
-        hlines = _header_lines(f)  # Count number of header lines
+        hlines, totlines = _header_lines(f)  # Count number of header lines
         ddict = {}  # Create temporary dictionary
         with open(f, 'r') as d1:  # Open the data file
             for n, line in enumerate(d1):  # Read and count lines
@@ -112,7 +114,7 @@ def _parser_3(file):
     pandas dataframe."""
     try:
         f = os.path.abspath(file)
-        hlines = _header_lines(f)  # Count number of header lines
+        hlines, totlines = _header_lines(f)  # Count number of header lines
         ddict = {}  # Create temporary dictionary
         with open(f, 'r') as d1:  # Open the data file
             for n, line in enumerate(d1):  # Read and count lines
@@ -138,7 +140,7 @@ def _parser_4(file):
     descriptive statistics and a pandas dataframe"""
     try:
         f = os.path.abspath(file)
-        hlines = _header_lines(f)  # Count number of header lines
+        hlines, totlines = _header_lines(f)  # Count number of header lines
         ddict = {}  # Create temporary dictionary
         with open(f, 'r') as d1:  # Open the data file
             for n, line in enumerate(d1):  # Read and count lines
@@ -171,18 +173,19 @@ def _parser_6(file):
         f = os.path.abspath(file)
         ddict = {}  # Create temporary dictionary
         with open(f, 'r') as d1:  # Open the data file
-            for n, line in enumerate(d1):  # Read and count lines
-                if n == 1:
+            for line in d1:  # Read and count lines
+                if line.startswith("Query"):
                     llist = line.strip().split('\t')
                     newlist = []
                     for j in llist:
                         ml = j.split(': ')
                         for k in ml:
                             newlist.extend([k])
-                    ddict[newlist[2]] = int(newlist[3])
+                    ddict[newlist[2]] = newlist[3]
                     ddict[newlist[4]] = int(newlist[5])
                     ddict[newlist[6]] = int(newlist[7])
                     ddict[newlist[8]] = int(newlist[9])
+                    ddict[newlist[10]] = int(newlist[11])
                     break
         dta = pd.read_csv(f, sep="\t", skiprows=2, comment=None)
         dta = rmdfpct(dta)

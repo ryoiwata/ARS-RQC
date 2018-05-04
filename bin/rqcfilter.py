@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # rqcfilter.py - A sequence quality control and metadata collection workflow
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 import argparse
@@ -56,15 +56,16 @@ def create_clean_name(fastq):
     """Parses the fastq input name, inserting 'arsrqc' into the name"""
     try:
         fastqnamelist = os.path.basename(fastq).split(".")
-        if fastqnamelist[-1] is 'gz' and fastqnamelist[-2] in ('fastq', 'fq'):
-            rqcnamelist = fastqnamelist.insert(-2, 'arsrqc')
-            rqcname = '.'.join(rqcnamelist)
+        if fastqnamelist[-1] == 'gz' and fastqnamelist[-2] in ('fastq', 'fq'):
+            n = fastqnamelist[:-2]
+            n.append('rqc')
+            rqcname = '.'.join(n)
         elif fastqnamelist[-1] in ('fastq', 'fq'):
-            rqcnamelist = fastqnamelist.insert(-1, 'arsrqc')
-            rqcnamelist.append('gz')
-            rqcname = '.'.join(rqcnamelist)
-            return rqcname
-    except RuntimeError:
+            n = fastqnamelist[:-1]
+            n.append('rqc')
+            rqcname = '.'.join(n)
+        return rqcname
+    except:
         print("Could not parse the name of the input fastq file. Please \
         make sure it ends in .fq, .fastq, .fq.gz or .fastq.gz ")
 
@@ -140,7 +141,7 @@ def main():
     rqctempdir = tempfile.mkdtemp()
 
     # Set up logging
-    logging.basicConfig(filename=os.path.join(args.output, 'rqc.log'),
+    logging.basicConfig(filename=os.path.join(args.output, args.output + '.rqc.log'),
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
     logging.info('Starting USDA ARS GBRU rolling quality control workflow.')
@@ -180,7 +181,7 @@ def main():
     # Clumpify data (Order reads by overlapping kmers to increase \
     # compression and processing speed)
     tmp_cy = mk_temp_dir(rqctempdir, 'clumpify')  # make temp dir
-    logging.info('Starting contaminant removal')
+    logging.info('Clumpifying reads for error correction, reduced file size and faster processing')
     if args.removevertebrates:  # Select input file
         infile = os.path.join(tmp_rvc, 'novert.fq.gz')
     else:
@@ -230,22 +231,24 @@ def main():
     else:
         try:
             cleanname = create_clean_name(args.fastq)
-            rqcloc = os.path.join(args.output, cleanname)
+            print(cleanname)
+            rqcloc = os.path.join(args.output, cleanname + '.fq.gz')
             logging.info("Copying RQC processed fastq to {}".format(rqcloc))
             shutil.copy2(os.path.join(tmp_cy, 'clumped.fq.gz'), rqcloc)
             logging.info("Parsing the metadata and writing it to a json file")
             write_metadata(indir=rqctempdir,
-                           outfile=os.path.join(args.output, 'metadata.json'))
+                           outfile=os.path.join(args.output, cleanname + '.metadata.json'))
             if args.keepmergeresults:
-                cm1 = cleanname.split('.')
-                cmm = fastqnamelist.insert(-2, 'merged')
+                cmm = cleanname.split('.')
+                cmm.insert(-2, 'merged')
                 cmms = '.'.join(cmm)
-                cmu = fastqnamelist.insert(-2, 'unmerged')
-                cmus = '.'.join(cmus)
+                cmu = cleanname.split('.')
+                cmu.insert(-2, 'unmerged')
+                cmus = '.'.join(cmu)
                 shutil.copy2(os.path.join(tmp_mr, 'merged.fq.gz'),
-                             os.path.join(args.output, cmms))
+                             os.path.join(args.output, cmms + '.fq.gz'))
                 shutil.copy2(os.path.join(tmp_mr, 'unmerged.fq.gz'),
-                             os.path.join(args.output, cmus))
+                             os.path.join(args.output, cmus + '.fq.gz'))
         except RuntimeError:
             print("Could not move all files to the output directory.")
 

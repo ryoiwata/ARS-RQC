@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # rqcmain.py - The core module for ARS-RQC qulaity control workflow
 # Adam Rivers 02/2017 USDA-ARS-GBRU
 import argparse
@@ -204,28 +204,21 @@ class Fastq():
             shutil.rmtree(temp_ordered_dir)
 
     def calculate_kmer_histogram(self, outdir):
-        """calcualtes kmer histogram from a fastq file using BBtools \
-        kmercountexact.sh and if that fails, approximates it with khist.sh"""
+        """calcualtes kmer histogram from a fastq file using BBtools khist.sh
+        """
+
         try:
-            parameters = ['kmercountexact.sh',
+            parameters = ['khist.sh',
                           'in=' + self.abspath,
+                          'histcol=2',
+                          '-Xmx16g',
                           'hist=' + os.path.join(outdir, 'kmerhist.txt')]
-            p5a = subprocess.run(parameters, stderr=subprocess.PIPE)
-            self.metadata['calculate_kmer_histogram'] = list(os.walk(outdir))
-            return p5a.stderr.decode('utf-8')
-        except RuntimeError:
-            print("Could not calculate the kmer histogram with \
-                  kmerexactcount.sh. Attempting to estimate it with khist.sh")
-            try:
-                parameters = ['khist.sh',
-                              'in=' + self.abspath,
-                              'histcol=2',
-                              'hist=' + os.path.join(outdir, 'kmerhist.txt')]
-                p5b = subprocess.run(parameters, stderr=subprocess.PIPE)
-                self.metadata['calculate_kmer_histogram'] = list(
-                              os.walk(outdir))
-            except RuntimeError:
-                return p5b.stderr.decode('utf-8')
+            p5b = subprocess.run(parameters, stderr=subprocess.PIPE)
+            self.metadata['calculate_kmer_histogram'] = list(
+                          os.walk(outdir))
+            return p2.stderr.decode('utf-8')
+        except:
+            logging.error(p5b.stderr.decode('utf-8'))
 
     def clumpify(self, outdir):
         """Reorders reads or read pairs in a fastq file by shared kmers. \
@@ -260,4 +253,4 @@ class Fastq():
             self.metadata['assign_taxonomy'] = list(os.walk(outdir))
             return p3.stderr.decode('utf-8')
         except RuntimeError:
-            print("could not estimate the taxonomic composition with sendsketch")
+            print("could not estimate the taxonomic composition with sendsketch")#
