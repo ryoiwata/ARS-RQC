@@ -92,7 +92,6 @@
       "zl":"8"
     },
     "assign_taxonomy":{
-      "k":"31",
       "autosize":"true",
       "reads":"400000"
     }
