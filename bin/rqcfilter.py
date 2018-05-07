@@ -95,13 +95,11 @@ def myparser():
                         help='the output directory')
     parser.add_argument('--overwrite', '-w', action='store_true', default=False,
                         help='a flag to overwrite the output directory')
-
     parser.add_argument('--removevertebrates', '-r', action='store_true',
                         default=False,
                         help='A flag to specify if the reads should be mapped  \
                         against human, cat, dog and mouse genomes to find \
                         contaminants. Default is false.')
-
     parser.add_argument('--paired', '-p', action='store_true', default=False,
                         help='A flag to specify if the fastq file is \
                         paired and interleaved. Default is false.')
@@ -122,28 +120,32 @@ def myparser():
 def main():
 
     args = myparser()  # load command line options
+    cleanname = create_clean_name(args.fastq)
 
     # Create the output directory
     if args.overwrite:  # if overwrite is true:
         if os.path.exists(args.output):
+            logging.warn('Overwrite is true and the ouput directory already exists, the existing directroy was deleted')
             shutil.rmtree(args.output)
             os.makedirs(args.output)
         else:
             os.makedirs(args.output)
     else:  # if overwrite is false:
         if os.path.exists(args.output):
-            raise IOError('The ouput directory already exists, check the \
-                          output flag')
+            logging.warn('Overwrite is false and the ouput directory already exists, data will be placed in the existing directroy')
         else:
             os.makedirs(args.output)
 
     # Create temporary directory
     rqctempdir = tempfile.mkdtemp()
+    logfilename = os.path.join(args.output, cleanname + '.log')
 
     # Set up logging
-    logging.basicConfig(filename=os.path.join(args.output, args.output + '.rqc.log'),
+    logging.basicConfig(filename=logfilename,
+                        filemode='w',
                         level=logging.INFO,
                         format='%(asctime)s %(message)s')
+
     logging.info('Starting USDA ARS GBRU rolling quality control workflow.')
 
     # Assign globals
@@ -230,8 +232,6 @@ def main():
     # Create name for clean file
     else:
         try:
-            cleanname = create_clean_name(args.fastq)
-            print(cleanname)
             rqcloc = os.path.join(args.output, cleanname + '.fq.gz')
             logging.info("Copying RQC processed fastq to {}".format(rqcloc))
             shutil.copy2(os.path.join(tmp_cy, 'clumped.fq.gz'), rqcloc)
