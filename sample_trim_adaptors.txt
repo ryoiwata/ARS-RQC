@@ -1,0 +1,7 @@
+java -Djava.library.path=/software/7/apps/bbtools/37.02/jni/ -ea -Xmx12380m -Xms12380m -cp /software/7/apps/bbtools/37.02/current/ jgi.BBDukF maq=5 trimq=10 qtrim=f overwrite=true maxns=0 minlen=25 minlenfraction=0.333 k=31 hdist=1 pigz=t unpigz=t zl=6 cf=t barcodefilter=crash ow=true rqc=hashmap outduk=test/kmerStats1.txt stats=test/scaffoldStats1.txt loglog ref=data/Illumina.artifacts.2013.12.no_DNA_RNA_spikeins.fa,data/DNA_spikeins.artifacts.2012.10.fa,data/phix174_ill.ref.fa,data/lambda.fa.gz,data/pJET1.2.fasta in=data/sample.fq.gz
+Executing jgi.BBDukF [maq=5, trimq=10, qtrim=f, overwrite=true, maxns=0, minlen=25, minlenfraction=0.333, k=31, hdist=1, pigz=t, unpigz=t, zl=6, cf=t, barcodefilter=crash, ow=true, rqc=hashmap, outduk=test/kmerStats1.txt, stats=test/scaffoldStats1.txt, loglog, ref=data/Illumina.artifacts.2013.12.no_DNA_RNA_spikeins.fa,data/DNA_spikeins.artifacts.2012.10.fa,data/phix174_ill.ref.fa,data/lambda.fa.gz,data/pJET1.2.fasta, in=data/sample.fq.gz]
+
+BBDuk version 37.66
+Exception in thread "main" java.lang.AssertionError: Can't find reference file data/Illumina.artifacts.2013.12.no_DNA_RNA_spikeins.fa
+	at jgi.BBDukF.<init>(BBDukF.java:537)
+	at jgi.BBDukF.main(BBDukF.java:70)
