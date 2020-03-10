@@ -1,3 +1,7 @@
+# conda environments
+conda_env/
+demo_conda_env/
+
 cat_masked.fa.gz
 dog_masked.fa.gz
 hg19_main_mask_ribo_animal_allplant_allfungus.fa.gz
